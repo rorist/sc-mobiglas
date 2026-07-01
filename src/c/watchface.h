@@ -5,10 +5,6 @@
 // ---------------------------------------------------------------------------
 // Color palette — mapped to nearest Pebble 6-bit GColor
 // ---------------------------------------------------------------------------
-// #38bdf8 -> GColorVividCerulean  (0x00AAFF)
-// #0ea5e9 -> GColorCobaltBlue    (0x0055AA)
-// #06090f -> GColorBlack          (0x000000)
-// ---------------------------------------------------------------------------
 #define COLOR_PRIMARY    GColorVividCerulean
 #define COLOR_SECONDARY  GColorCobaltBlue
 #define COLOR_BG         GColorBlack
@@ -17,36 +13,59 @@
 // ---------------------------------------------------------------------------
 // Layout constants — Emery (PT2): 200 x 228
 // ---------------------------------------------------------------------------
-#define MARGIN       3
-#define PANEL_GAP    2
+#define SCREEN_W      200
+#define SCREEN_H      228
+#define MARGIN        3
+#define PANEL_GAP     2
 
-// Full-width panel width: 200 - 2*MARGIN = 194
-#define PANEL_FULL_W  194
+// Full-width panel width
+#define PANEL_FULL_W  (SCREEN_W - 2 * MARGIN)   // 194
 
-// Half-width panel: (194 - PANEL_GAP) / 2 = 96
-#define PANEL_HALF_W  96
+// Half-width panel (for side-by-side MEDICAL/ENVIRON)
+#define PANEL_HALF_W  ((PANEL_FULL_W - PANEL_GAP) / 2)  // 96
 
-// Panel heights (emery 228px: 3 + 78 + 2 + 90 + 2 + 50 + 3 = 228)
-#define TIME_PANEL_H     78
-#define MID_PANEL_H      90
-#define SYSTEMS_PANEL_H  50
+// ---------------------------------------------------------------------------
+// Panel IDs (bit positions match config bitmask bits 2-5)
+// ---------------------------------------------------------------------------
+#define PANEL_TIME     0  // always visible
+#define PANEL_MEDICAL  1  // config bit 2
+#define PANEL_ENVIRON  2  // config bit 3
+#define PANEL_SYSTEMS  3  // config bit 4
+#define PANEL_COUNT    4
 
-// Panel Y origins
-#define TIME_PANEL_Y     MARGIN                                         // 3
-#define MID_PANEL_Y      (TIME_PANEL_Y + TIME_PANEL_H + PANEL_GAP)     // 65
-#define SYSTEMS_PANEL_Y  (MID_PANEL_Y + MID_PANEL_H + PANEL_GAP)       // 165
+// ---------------------------------------------------------------------------
+// Panel minimum heights — used by layout engine
+// ---------------------------------------------------------------------------
+#define TIME_MIN_H     78  // 48px font + date + chrome
+#define MEDICAL_MIN_H  70  // header + 2 data rows
+#define ENVIRON_MIN_H  70  // header + 3 data rows
+#define SYSTEMS_MIN_H  44  // header + battery bar
 
-// Panel rectangles
-#define RECT_TIME     GRect(MARGIN, TIME_PANEL_Y, PANEL_FULL_W, TIME_PANEL_H)
-#define RECT_MEDICAL  GRect(MARGIN, MID_PANEL_Y, PANEL_HALF_W, MID_PANEL_H)
-#define RECT_ENVIRON  GRect(MARGIN + PANEL_HALF_W + PANEL_GAP, MID_PANEL_Y, PANEL_HALF_W, MID_PANEL_H)
-#define RECT_SYSTEMS  GRect(MARGIN, SYSTEMS_PANEL_Y, PANEL_FULL_W, SYSTEMS_PANEL_H)
+// ---------------------------------------------------------------------------
+// Config bitmask (from KEY_CONFIG AppMessage)
+// ---------------------------------------------------------------------------
+#define CONFIG_12H       (1 << 0)
+#define CONFIG_FAHRENHEIT (1 << 1)
+#define CONFIG_MEDICAL   (1 << 2)
+#define CONFIG_ENVIRON   (1 << 3)
+#define CONFIG_SYSTEMS   (1 << 4)
+#define CONFIG_SECONDS   (1 << 5)
 
-// Panel IDs
-#define PANEL_TIME     0
-#define PANEL_MEDICAL  1
-#define PANEL_ENVIRON  2
-#define PANEL_SYSTEMS  3
+// Default config: all panels ON, 24h, Celsius
+#define CONFIG_DEFAULT   (CONFIG_MEDICAL | CONFIG_ENVIRON | CONFIG_SYSTEMS)
+
+// ---------------------------------------------------------------------------
+// Layout result — computed at runtime by layout engine
+// ---------------------------------------------------------------------------
+typedef struct {
+  bool     visible[PANEL_COUNT];
+  GRect    rects[PANEL_COUNT];
+  int      panel_count;  // number of visible panels
+} LayoutInfo;
+
+// Compute layout for the given config bitmask
+// screen_bounds: the full window bounds (200x228 on emery)
+LayoutInfo layout_compute(GRect screen_bounds, uint8_t config);
 
 // ---------------------------------------------------------------------------
 // Watchface lifecycle
@@ -54,3 +73,4 @@
 void watchface_create(Window *window);
 void watchface_destroy(void);
 void watchface_tick(struct tm *tick_time, TimeUnits units_changed);
+void watchface_update_config(uint8_t config);

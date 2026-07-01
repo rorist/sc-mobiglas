@@ -11,16 +11,24 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // Panel chrome: border + corner accents (no header label for TIME)
   panel_draw_chrome(ctx, bounds, COLOR_PRIMARY);
 
+  // Content block: 48px time + ~16px date = ~68px total
+  // Center this block vertically within the panel
+  int content_h = 68;
+  int y_offset = (bounds.size.h - content_h) / 2;
+  if (y_offset < 4) y_offset = 4;
+
   // Time: HH:MM — large centered text
-  GRect time_rect = GRect(bounds.origin.x + 4, bounds.origin.y + 6,
-                          bounds.size.w - 8, 50);
+  GRect time_rect = GRect(bounds.origin.x + 4,
+                           bounds.origin.y + y_offset,
+                           bounds.size.w - 8, 50);
   graphics_context_set_text_color(ctx, COLOR_TEXT);
   graphics_draw_text(ctx, s_time_buf, fonts_get(FONT_SIZE_TIME), time_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 
   // Date: DOW DD MON — smaller centered text below time
-  GRect date_rect = GRect(bounds.origin.x + 4, bounds.origin.y + 56,
+  GRect date_rect = GRect(bounds.origin.x + 4,
+                           bounds.origin.y + y_offset + 50,
                            bounds.size.w - 8, 18);
   graphics_draw_text(ctx, s_date_buf, fonts_get(FONT_SIZE_HEADER), date_rect,
                      GTextOverflowModeTrailingEllipsis,
@@ -47,20 +55,21 @@ void time_panel_destroy(void) {
 }
 
 void time_panel_update(struct tm *tick_time) {
-  // Format time — 24h for now (config will add 12h later)
   strftime(s_time_buf, sizeof(s_time_buf), "%H:%M", tick_time);
 
-  // Format date: "TUE 01 JUL"
   strftime(s_date_buf, sizeof(s_date_buf), "%a %d %b", tick_time);
 
-  // Uppercase the date string
+  // Uppercase
   for (char *p = s_date_buf; *p; p++) {
-    if (*p >= 'a' && *p <= 'z') {
-      *p -= 32;
-    }
+    if (*p >= 'a' && *p <= 'z') *p -= 32;
   }
 
+  if (s_layer) layer_mark_dirty(s_layer);
+}
+
+void time_panel_update_bounds(GRect bounds) {
   if (s_layer) {
+    layer_set_frame(s_layer, bounds);
     layer_mark_dirty(s_layer);
   }
 }
