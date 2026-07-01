@@ -1,0 +1,48 @@
+{
+  "name": "sc-mobiglas",
+  "author": "MakeAwesomeHappen",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "SC mobiGlas",
+    "uuid": "f9f0f305-ec71-473d-8e07-799225d4d099",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": ["emery"],
+    "capabilities": ["health"],
+    "watchapp": {
+      "watchface": true
+    },
+    "messageKeys": {
+      "KEY_TEMP": 0,
+      "KEY_WEATHER": 1,
+      "KEY_EVENT_TITLE": 2,
+      "KEY_EVENT_TIME": 3,
+      "KEY_CONFIG": 4
+    },
+    "resources": {
+      "media": [
+        {
+          "type": "font",
+          "name": "FONT_RAJDHANI_14",
+          "file": "fonts/rajdhani-medium.ttf",
+          "characterRegex": "[0-9:A-Za-z /.%-]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_RAJDHANI_18",
+          "file": "fonts/rajdhani-medium.ttf",
+          "characterRegex": "[0-9:A-Za-z /.%-]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_RAJDHANI_48",
+          "file": "fonts/rajdhani-medium.ttf",
+          "characterRegex": "[0-9: ]"
+        }
+      ]
+    }
+  }
+}
