@@ -45,25 +45,25 @@ void draw_panel_header(GContext *ctx, GRect bounds, const char *title,
 
   graphics_context_set_stroke_color(ctx, color);
 
-  // Vertical accent bar: 2px wide, 10px tall, at (x+4, y+4)
-  graphics_draw_line(ctx, GPoint(x + 4, y + 4), GPoint(x + 4, y + 13));
-  graphics_draw_line(ctx, GPoint(x + 5, y + 4), GPoint(x + 5, y + 13));
+  // Vertical accent bar: 2px wide, 8px tall, at (x+4, y+3)
+  graphics_draw_line(ctx, GPoint(x + 4, y + 3), GPoint(x + 4, y + 10));
+  graphics_draw_line(ctx, GPoint(x + 5, y + 3), GPoint(x + 5, y + 10));
 
   // Header text after accent bar
-  GRect header_rect = GRect(x + 8, y + 2, w - 16, 16);
+  GRect header_rect = GRect(x + 8, y + 1, w - 16, 14);
   graphics_context_set_text_color(ctx, color);
   graphics_draw_text(ctx, title, font, header_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
 
   // Partial underline: from accent bar to ~60% width
-  int underline_y = y + 18;
+  int underline_y = y + 14;
   int line_end = x + 4 + (w - 8) * 6 / 10;
   graphics_draw_line(ctx, GPoint(x + 4, underline_y), GPoint(line_end, underline_y));
 
-  // Right-side arrow glyph: small > at (w-8, y+6)
+  // Right-side arrow glyph: small > at (w-8, y+4)
   int ax = x + w - 8;
-  int ay = y + 6;
+  int ay = y + 4;
   graphics_draw_line(ctx, GPoint(ax, ay), GPoint(ax + 3, ay + 3));
   graphics_draw_line(ctx, GPoint(ax + 3, ay + 3), GPoint(ax, ay + 6));
 }
