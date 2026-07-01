@@ -17,6 +17,10 @@ static void prv_root_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
   graphics_context_set_fill_color(ctx, COLOR_BG);
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
+
+  // Bottom accent line
+  graphics_context_set_stroke_color(ctx, COLOR_PRIMARY);
+  graphics_draw_line(ctx, GPoint(0, 225), GPoint(SCREEN_W - 1, 225));
 }
 
 // ---------------------------------------------------------------------------

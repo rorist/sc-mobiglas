@@ -2,13 +2,16 @@
 
 #include <pebble.h>
 
+// Fill panel background with a dark color
+void draw_panel_fill(GContext *ctx, GRect bounds, GColor color);
+
 // Draw a 1px stroke rectangle border
 void draw_panel_border(GContext *ctx, GRect bounds, GColor color);
 
-// Draw L-shaped corner accents (4px legs) at all 4 corners
+// Draw L-shaped corner accents (6px legs, 1px inset) at all 4 corners
 void draw_corner_accents(GContext *ctx, GRect bounds, GColor color);
 
-// Draw a panel header: label text left-aligned with 1px underline
+// Draw panel header: accent bar + label + partial underline + arrow glyph
 void draw_panel_header(GContext *ctx, GRect bounds, const char *title,
                        GFont font, GColor color);
 

@@ -7,17 +7,16 @@
 
 // ---------------------------------------------------------------------------
 // Shared panel drawing helpers
-// Panels use LayerUpdateProc for custom drawing. These helpers provide
-// the common mobiGlas visual elements: border, corner accents, header.
 // ---------------------------------------------------------------------------
 
-// Draw the full panel chrome: border + corner accents
+// Draw the full panel chrome: fill + border + corner accents
 static inline void panel_draw_chrome(GContext *ctx, GRect bounds, GColor color) {
+  draw_panel_fill(ctx, bounds, COLOR_PANEL_BG);
   draw_panel_border(ctx, bounds, color);
   draw_corner_accents(ctx, bounds, color);
 }
 
-// Draw chrome + header label (combines border, accents, title)
+// Draw chrome + header label (fill, border, accents, accent bar, title)
 static inline void panel_draw_header_full(GContext *ctx, GRect bounds,
                                           const char *title, GColor color) {
   panel_draw_chrome(ctx, bounds, color);

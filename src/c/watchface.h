@@ -8,6 +8,7 @@
 #define COLOR_PRIMARY    GColorVividCerulean
 #define COLOR_SECONDARY  GColorCobaltBlue
 #define COLOR_BG         GColorBlack
+#define COLOR_PANEL_BG   GColorOxfordBlue
 #define COLOR_TEXT       GColorVividCerulean
 
 // ---------------------------------------------------------------------------
