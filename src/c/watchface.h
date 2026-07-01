@@ -26,10 +26,10 @@
 // Half-width panel: (194 - PANEL_GAP) / 2 = 96
 #define PANEL_HALF_W  96
 
-// Panel heights
-#define TIME_PANEL_H     60
-#define MID_PANEL_H      98
-#define SYSTEMS_PANEL_H  60
+// Panel heights (emery 228px: 3 + 78 + 2 + 90 + 2 + 50 + 3 = 228)
+#define TIME_PANEL_H     78
+#define MID_PANEL_H      90
+#define SYSTEMS_PANEL_H  50
 
 // Panel Y origins
 #define TIME_PANEL_Y     MARGIN                                         // 3

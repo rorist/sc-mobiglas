@@ -8,23 +8,20 @@ static char s_date_buf[16];  // "TUE 01 JUL\0"
 static void prv_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
 
-  // Panel chrome: border + corner accents + header
-  panel_draw_header_full(ctx, bounds, "TIME", COLOR_PRIMARY);
-
-  // Content area below header
-  GRect content = panel_content_rect(bounds);
+  // Panel chrome: border + corner accents (no header label for TIME)
+  panel_draw_chrome(ctx, bounds, COLOR_PRIMARY);
 
   // Time: HH:MM — large centered text
-  GRect time_rect = GRect(content.origin.x, content.origin.y - 4,
-                          content.size.w, 48);
+  GRect time_rect = GRect(bounds.origin.x + 4, bounds.origin.y + 6,
+                          bounds.size.w - 8, 50);
   graphics_context_set_text_color(ctx, COLOR_TEXT);
   graphics_draw_text(ctx, s_time_buf, fonts_get(FONT_SIZE_TIME), time_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 
   // Date: DOW DD MON — smaller centered text below time
-  GRect date_rect = GRect(content.origin.x, content.origin.y + 30,
-                           content.size.w, 18);
+  GRect date_rect = GRect(bounds.origin.x + 4, bounds.origin.y + 56,
+                           bounds.size.w - 8, 18);
   graphics_draw_text(ctx, s_date_buf, fonts_get(FONT_SIZE_HEADER), date_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
