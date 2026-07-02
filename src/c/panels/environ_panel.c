@@ -25,18 +25,18 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
 
   // Temp label with pipe marker
   prv_draw_pipe(ctx, x, y + 2, COLOR_SECONDARY);
-  GRect temp_lbl = GRect(x + 4, y, w - 4, 12);
+  GRect temp_lbl = GRect(x + 4, y, w - 4, 14);
   graphics_draw_text(ctx, "TEMP", fonts_get(FONT_SIZE_HEADER), temp_lbl,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
   // Temp value
-  GRect temp_val = GRect(x + 4, y + 11, w - 4, 16);
+  GRect temp_val = GRect(x + 4, y + 10, w - 4, 18);
   graphics_draw_text(ctx, s_temp_buf, fonts_get(FONT_SIZE_VALUE), temp_val,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
 
   // Condition (inline, smaller)
-  GRect cond_rect = GRect(x + 4, y + 26, w - 4, 12);
+  GRect cond_rect = GRect(x + 4, y + 28, w - 4, 14);
   graphics_draw_text(ctx, s_cond_buf, fonts_get(FONT_SIZE_HEADER), cond_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
@@ -44,14 +44,14 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // Event with pipe marker
   if (s_event_buf[0]) {
     prv_draw_pipe(ctx, x, y + 40, COLOR_SECONDARY);
-    GRect evt_rect = GRect(x + 4, y + 38, w - 4, 12);
+    GRect evt_rect = GRect(x + 4, y + 42, w - 4, 14);
     graphics_draw_text(ctx, s_event_buf, fonts_get(FONT_SIZE_HEADER), evt_rect,
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentLeft, NULL);
   }
 
   if (s_evtime_buf[0]) {
-    GRect evtime_rect = GRect(x + 4, y + 50, w - 4, 12);
+    GRect evtime_rect = GRect(x + 4, y + 56, w - 4, 14);
     graphics_draw_text(ctx, s_evtime_buf, fonts_get(FONT_SIZE_HEADER), evtime_rect,
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentLeft, NULL);

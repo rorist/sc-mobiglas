@@ -31,25 +31,25 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // Stacked: label small on top, value larger below
   // Heart rate label
   GRect hr_lbl = GRect(content.origin.x, content.origin.y,
-                        content.size.w, 12);
+                        content.size.w, 14);
   graphics_draw_text(ctx, "HEART RATE", fonts_get(FONT_SIZE_HEADER), hr_lbl,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
   // Heart rate value
-  GRect hr_val = GRect(content.origin.x, content.origin.y + 11,
+  GRect hr_val = GRect(content.origin.x, content.origin.y + 12,
                         content.size.w, 18);
   graphics_draw_text(ctx, s_hr_buf, fonts_get(FONT_SIZE_VALUE), hr_val,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
 
   // Steps label
-  GRect st_lbl = GRect(content.origin.x, content.origin.y + 28,
-                        content.size.w, 12);
+  GRect st_lbl = GRect(content.origin.x, content.origin.y + 30,
+                        content.size.w, 14);
   graphics_draw_text(ctx, "STEPS", fonts_get(FONT_SIZE_HEADER), st_lbl,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
   // Steps value
-  GRect st_val = GRect(content.origin.x, content.origin.y + 39,
+  GRect st_val = GRect(content.origin.x, content.origin.y + 43,
                         content.size.w, 18);
   graphics_draw_text(ctx, s_steps_buf, fonts_get(FONT_SIZE_VALUE), st_val,
                      GTextOverflowModeTrailingEllipsis,
