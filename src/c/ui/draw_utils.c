@@ -2,12 +2,12 @@
 
 void draw_panel_fill(GContext *ctx, GRect bounds, GColor color) {
   graphics_context_set_fill_color(ctx, color);
-  graphics_fill_rect(ctx, bounds, 0, GCornerNone);
+  graphics_fill_rect(ctx, bounds, 3, GCornersAll);
 }
 
 void draw_panel_border(GContext *ctx, GRect bounds, GColor color) {
   graphics_context_set_stroke_color(ctx, color);
-  graphics_draw_rect(ctx, bounds);
+  graphics_draw_round_rect(ctx, bounds, 3);
 }
 
 void draw_corner_accents(GContext *ctx, GRect bounds, GColor color) {
@@ -61,11 +61,14 @@ void draw_panel_header(GContext *ctx, GRect bounds, const char *title,
   int line_end = x + 4 + (w - 8) * 6 / 10;
   graphics_draw_line(ctx, GPoint(x + 4, underline_y), GPoint(line_end, underline_y));
 
-  // Right-side arrow glyph: small > at (w-8, y+4)
-  int ax = x + w - 8;
-  int ay = y + 4;
-  graphics_draw_line(ctx, GPoint(ax, ay), GPoint(ax + 3, ay + 3));
-  graphics_draw_line(ctx, GPoint(ax + 3, ay + 3), GPoint(ax, ay + 6));
+  // Right-side diagonal arrow glyph (up-right): at top-right corner
+  int ax = x + w - 10;  // shaft bottom-left
+  int ay = y + 10;
+  int bx = x + w - 4;   // shaft top-right (tip)
+  int by = y + 4;
+  graphics_draw_line(ctx, GPoint(ax, ay), GPoint(bx, by));   // diagonal shaft
+  graphics_draw_line(ctx, GPoint(bx, by), GPoint(bx - 4, by)); // left barb
+  graphics_draw_line(ctx, GPoint(bx, by), GPoint(bx, by + 4)); // down barb
 }
 
 void draw_battery_bar(GContext *ctx, GRect bounds, int percent, GColor color) {
@@ -87,4 +90,38 @@ void draw_battery_bar(GContext *ctx, GRect bounds, int percent, GColor color) {
       graphics_draw_rect(ctx, seg_rect);
     }
   }
+}
+
+void draw_ring_gauge(GContext *ctx, GRect box, int percent,
+                     uint16_t thickness, GColor track, GColor fill) {
+  if (percent < 0) percent = 0;
+  if (percent > 100) percent = 100;
+
+  // Track (full ring)
+  graphics_context_set_fill_color(ctx, track);
+  graphics_fill_radial(ctx, box, GOvalScaleModeFitCircle, thickness,
+                       DEG_TO_TRIGANGLE(0), DEG_TO_TRIGANGLE(360));
+
+  // Filled portion
+  if (percent > 0) {
+    graphics_context_set_fill_color(ctx, fill);
+    graphics_fill_radial(ctx, box, GOvalScaleModeFitCircle, thickness,
+                         DEG_TO_TRIGANGLE(0),
+                         DEG_TO_TRIGANGLE((percent * 360) / 100));
+  }
+}
+
+void draw_dual_ring(GContext *ctx, GRect box,
+                    int outer_pct, GColor outer_col,
+                    int inner_pct, GColor inner_col) {
+  const uint16_t thickness = 4;
+  const int innerpad = thickness + 3;  // gap between rings
+
+  // Outer ring
+  draw_ring_gauge(ctx, box, outer_pct, thickness, COLOR_GAUGE_BG, outer_col);
+
+  // Inner ring (reduced box)
+  GRect inner = GRect(box.origin.x + innerpad, box.origin.y + innerpad,
+                      box.size.w - 2 * innerpad, box.size.h - 2 * innerpad);
+  draw_ring_gauge(ctx, inner, inner_pct, thickness, COLOR_GAUGE_BG, inner_col);
 }

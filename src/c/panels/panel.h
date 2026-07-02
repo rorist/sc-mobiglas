@@ -13,7 +13,6 @@
 static inline void panel_draw_chrome(GContext *ctx, GRect bounds, GColor color) {
   draw_panel_fill(ctx, bounds, COLOR_PANEL_BG);
   draw_panel_border(ctx, bounds, color);
-  draw_corner_accents(ctx, bounds, color);
 }
 
 // Draw chrome + header label (fill, border, accents, accent bar, title)

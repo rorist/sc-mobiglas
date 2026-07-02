@@ -28,13 +28,13 @@
           "type": "font",
           "name": "FONT_RAJDHANI_14",
           "file": "fonts/rajdhani-medium.ttf",
-          "characterRegex": "[0-9:A-Za-z /.%-]"
+          "characterRegex": "[0-9:A-Za-z /.%°-]"
         },
         {
           "type": "font",
           "name": "FONT_RAJDHANI_18",
           "file": "fonts/rajdhani-medium.ttf",
-          "characterRegex": "[0-9:A-Za-z /.%-]"
+          "characterRegex": "[0-9:A-Za-z /.%°-]"
         },
         {
           "type": "font",

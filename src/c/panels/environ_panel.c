@@ -62,7 +62,7 @@ Layer *environ_panel_create(GRect bounds) {
   s_layer = layer_create(bounds);
   layer_set_update_proc(s_layer, prv_update_proc);
 
-  snprintf(s_temp_buf, sizeof(s_temp_buf), "--C");
+  snprintf(s_temp_buf, sizeof(s_temp_buf), "--\u00b0C");
   snprintf(s_cond_buf, sizeof(s_cond_buf), "---");
   snprintf(s_event_buf, sizeof(s_event_buf), "EVT: ---");
   s_evtime_buf[0] = '\0';
@@ -85,7 +85,7 @@ void environ_panel_update_bounds(GRect bounds) {
 }
 
 void environ_panel_set_weather(int8_t temp_c, const char *condition) {
-  snprintf(s_temp_buf, sizeof(s_temp_buf), "%dC", (int)temp_c);
+  snprintf(s_temp_buf, sizeof(s_temp_buf), "%d\u00b0C", (int)temp_c);
   if (condition) {
     strncpy(s_cond_buf, condition, sizeof(s_cond_buf) - 1);
     s_cond_buf[sizeof(s_cond_buf) - 1] = '\0';

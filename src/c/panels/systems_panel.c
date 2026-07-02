@@ -15,12 +15,20 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
 
   // Battery percentage
   BatteryChargeState bat = battery_state_service_peek();
-  snprintf(s_bat_buf, sizeof(s_bat_buf), "BAT:%d%%", bat.charge_percent);
+  snprintf(s_bat_buf, sizeof(s_bat_buf), "BAT: %d%%", bat.charge_percent);
+
+  // Semantic color: charging=green, low(<=20%)=orange, else primary
+  GColor bat_col = COLOR_PRIMARY;
+  if (bat.is_charging) {
+    bat_col = COLOR_SAFE;
+  } else if (bat.charge_percent <= 20) {
+    bat_col = COLOR_WARN;
+  }
 
   // Battery bar: upper portion of content area
   GRect bar_rect = GRect(content.origin.x, content.origin.y + 2,
                           content.size.w, 8);
-  draw_battery_bar(ctx, bar_rect, bat.charge_percent, COLOR_PRIMARY);
+  draw_battery_bar(ctx, bar_rect, bat.charge_percent, bat_col);
 
   // Battery text below bar
   GRect text_rect = GRect(content.origin.x, content.origin.y + 12,

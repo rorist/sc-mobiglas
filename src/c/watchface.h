@@ -10,6 +10,9 @@
 #define COLOR_BG         GColorBlack
 #define COLOR_PANEL_BG   GColorOxfordBlue
 #define COLOR_TEXT       GColorVividCerulean
+#define COLOR_WARN       GColorOrange
+#define COLOR_SAFE       GColorMalachite
+#define COLOR_GAUGE_BG   GColorCobaltBlue
 
 // ---------------------------------------------------------------------------
 // Layout constants — Emery (PT2): 200 x 228
