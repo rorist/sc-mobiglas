@@ -7,7 +7,8 @@ static Layer *s_layer;
 static char s_temp_buf[12];     // "-12°C" or "--°C"
 static char s_cond_buf[12];     // "CLOUDY" or "---"
 static char s_wind_buf[16];     // "12 km/h WSW"
-static char s_humuv_buf[14];    // "68%  UV 3"
+static char s_hum_buf[8];       // "68%"
+static char s_uv_buf[4];        // "3"
 
 // Last known temperature in canonical Celsius; sentinel = never received
 #define TEMP_UNAVAILABLE ((int8_t)-128)
@@ -50,15 +51,15 @@ static void prv_format_wind(void) {
 }
 
 static void prv_format_humuv(void) {
-  if (s_humidity < 0 && s_uv < 0) {
-    snprintf(s_humuv_buf, sizeof(s_humuv_buf), "---");
-  } else if (s_humidity < 0) {
-    snprintf(s_humuv_buf, sizeof(s_humuv_buf), "UV %d", (int)s_uv);
-  } else if (s_uv < 0) {
-    snprintf(s_humuv_buf, sizeof(s_humuv_buf), "%d%%", (int)s_humidity);
+  if (s_humidity < 0) {
+    snprintf(s_hum_buf, sizeof(s_hum_buf), "---");
   } else {
-    snprintf(s_humuv_buf, sizeof(s_humuv_buf), "%d%%  UV %d",
-             (int)s_humidity, (int)s_uv);
+    snprintf(s_hum_buf, sizeof(s_hum_buf), "%d%%", (int)s_humidity);
+  }
+  if (s_uv < 0) {
+    snprintf(s_uv_buf, sizeof(s_uv_buf), "---");
+  } else {
+    snprintf(s_uv_buf, sizeof(s_uv_buf), "%d", (int)s_uv);
   }
 }
 
@@ -119,15 +120,20 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
 
-  // Line 3: drop icon + humidity/UV text
+  // Line 3: humidity (left half) + UV (right half), mirror of line 4
+  int half = w / 2;
   draw_drop_icon(ctx, GPoint(x, y0 + 30 + 3));
-  GRect humuv_rect = GRect(x + 10, y0 + 30 - l14, w - 10, line_h + l14);
-  graphics_draw_text(ctx, s_humuv_buf, fonts_get(FONT_SIZE_HEADER), humuv_rect,
+  GRect hum_rect = GRect(x + 10, y0 + 30 - l14, half - 10, line_h + l14);
+  graphics_draw_text(ctx, s_hum_buf, fonts_get(FONT_SIZE_HEADER), hum_rect,
+                     GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentLeft, NULL);
+  draw_uv_icon(ctx, GPoint(x + half, y0 + 30 + 3));
+  GRect uv_rect = GRect(x + half + 10, y0 + 30 - l14, w - half - 10, line_h + l14);
+  graphics_draw_text(ctx, s_uv_buf, fonts_get(FONT_SIZE_HEADER), uv_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
 
   // Line 4: sun icons + times — rise group left, set group right
-  const int half = w / 2;
   const int y4 = y0 + 45;
   draw_sun_icon(ctx, GPoint(x, y4 + 3), false);
   GRect rise_rect = GRect(x + 10, y4 - l14, half - 10, line_h + l14);

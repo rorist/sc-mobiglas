@@ -34,21 +34,25 @@ void draw_dual_ring(GContext *ctx, GRect box,
                     int outer_pct, GColor outer_col,
                     int inner_pct, GColor inner_col);
 
-// Draw a 10x10px holo-style weather icon at origin (top-left)
+// Draw an 8x8px holo-style weather icon at origin (top-left)
 // cond_idx: 0 CLEAR, 1 CLOUDY, 2 FOG, 3 RAIN, 4 SNOW, 5 STORM, 6 UNKNOWN
-// Color by severity: CLEAR/CLOUDY/FOG/UNKNOWN = COLOR_PRIMARY,
+// Color by severity: CLEAR/CLOUDY/FOG/UNKNOWN = configurable LABEL color,
 // RAIN/SNOW = COLOR_WARN, STORM = COLOR_ALERT
 void draw_weather_icon(GContext *ctx, GPoint origin, int cond_idx);
 
 // Draw an 8x8px holo-style sun icon at origin (top-left)
 // sunset=false: sun (circle + rays), sunset=true: half moon (right arc + chord)
-// Color: COLOR_PRIMARY
+// Color: configurable LABEL color
 void draw_sun_icon(GContext *ctx, GPoint origin, bool sunset);
 
 // Draw an 8x8px holo-style drop (humidity) icon at origin (top-left)
-// Color: COLOR_PRIMARY
+// Color: configurable LABEL color
 void draw_drop_icon(GContext *ctx, GPoint origin);
 
 // Draw an 8x8px holo-style NE arrow (wind) icon at origin (top-left)
-// Color: COLOR_PRIMARY
+// Color: configurable LABEL color
 void draw_wind_icon(GContext *ctx, GPoint origin);
+
+// Draw an 8x8px holo-style UV icon at origin (top-left): 3 parallel beams
+// Color: configurable LABEL color
+void draw_uv_icon(GContext *ctx, GPoint origin);

@@ -162,7 +162,7 @@ void draw_dual_ring(GContext *ctx, GRect box,
 void draw_weather_icon(GContext *ctx, GPoint origin, int cond_idx) {
   int x = origin.x;
   int y = origin.y;
-  GColor col = COLOR_PRIMARY;
+  GColor col = watchface_get_color_label();
   if (cond_idx == 3 || cond_idx == 4) col = COLOR_WARN;       // RAIN / SNOW
   else if (cond_idx == 5) col = COLOR_ALERT;                  // STORM
 
@@ -220,7 +220,7 @@ void draw_weather_icon(GContext *ctx, GPoint origin, int cond_idx) {
 void draw_sun_icon(GContext *ctx, GPoint origin, bool sunset) {
   int x = origin.x;
   int y = origin.y;
-  graphics_context_set_stroke_color(ctx, COLOR_PRIMARY);
+  graphics_context_set_stroke_color(ctx, watchface_get_color_label());
 
   if (!sunset) {
     // Sun — hollow circle r2 centered (4,4) + 8 rays
@@ -247,7 +247,7 @@ void draw_sun_icon(GContext *ctx, GPoint origin, bool sunset) {
 void draw_drop_icon(GContext *ctx, GPoint origin) {
   int x = origin.x;
   int y = origin.y;
-  graphics_context_set_stroke_color(ctx, COLOR_PRIMARY);
+  graphics_context_set_stroke_color(ctx, watchface_get_color_label());
 
   // Pointed top converging to the bowl
   graphics_draw_line(ctx, GPoint(x + 4, y + 1), GPoint(x + 2, y + 5));
@@ -263,11 +263,24 @@ void draw_drop_icon(GContext *ctx, GPoint origin) {
 void draw_wind_icon(GContext *ctx, GPoint origin) {
   int x = origin.x;
   int y = origin.y;
-  graphics_context_set_stroke_color(ctx, COLOR_PRIMARY);
+  graphics_context_set_stroke_color(ctx, watchface_get_color_label());
 
   // Shaft diagonal bottom-left → top-right
   graphics_draw_line(ctx, GPoint(x + 1, y + 6), GPoint(x + 6, y + 1));
   // Arrowhead — horizontal-left and vertical-down from tip
   graphics_draw_line(ctx, GPoint(x + 6, y + 1), GPoint(x + 3, y + 1));
   graphics_draw_line(ctx, GPoint(x + 6, y + 1), GPoint(x + 6, y + 4));
+}
+
+// ---------------------------------------------------------------------------
+// UV icon — 8x8px three parallel diagonal beams (light from above)
+// ---------------------------------------------------------------------------
+void draw_uv_icon(GContext *ctx, GPoint origin) {
+  int x = origin.x;
+  int y = origin.y;
+  graphics_context_set_stroke_color(ctx, watchface_get_color_label());
+
+  graphics_draw_line(ctx, GPoint(x + 0, y + 2), GPoint(x + 2, y + 4));
+  graphics_draw_line(ctx, GPoint(x + 3, y + 2), GPoint(x + 5, y + 4));
+  graphics_draw_line(ctx, GPoint(x + 6, y + 2), GPoint(x + 7, y + 3));
 }

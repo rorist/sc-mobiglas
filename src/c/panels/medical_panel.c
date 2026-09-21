@@ -82,7 +82,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     draw_ring_gauge(ctx, GRect(col_l, y0, rd, rd),
                     s_hr_pct, 3, COLOR_SECONDARY, hr_col);
     draw_ring_gauge(ctx, GRect(col_r, y0, rd, rd),
-                    s_steps_pct, 3, COLOR_SECONDARY, COLOR_PRIMARY);
+                    s_steps_pct, 3, COLOR_SECONDARY, watchface_get_color_label());
 
     // Values centered inside rings (leading-compensated), labels below
     graphics_context_set_text_color(ctx, hr_val_col);
@@ -117,7 +117,8 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     int ring_x = cx + (cw - ring_d) / 2;
     GRect ring_box = GRect(ring_x, cy, ring_d, ring_d);
 
-    draw_dual_ring(ctx, ring_box, s_hr_pct, hr_col, s_steps_pct, COLOR_PRIMARY);
+    draw_dual_ring(ctx, ring_box, s_hr_pct, hr_col, s_steps_pct,
+                   watchface_get_color_label());
 
     // BPM centered in ring (leading-compensated), labels+values below
     GRect hr_c = GRect(cx, cy + ring_d / 2 - 12 - FONT_LEADING_18, cw,
