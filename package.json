@@ -37,7 +37,8 @@
       "KEY_HUMIDITY": 12,
       "KEY_UV": 13,
       "KEY_SUNRISE": 14,
-      "KEY_SUNSET": 15
+      "KEY_SUNSET": 15,
+      "KEY_LOGO": 16
     },
     "resources": {
       "media": [
@@ -64,6 +65,36 @@
           "name": "FONT_RAJDHANI_56",
           "file": "fonts/rajdhani-medium.ttf",
           "characterRegex": "[0-9: ]"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_AEGIS",
+          "file": "images/logo_aegis.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_ANVIL",
+          "file": "images/logo_anvil.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_CRUSADER",
+          "file": "images/logo_crusader.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_RSI",
+          "file": "images/logo_rsi.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_MISC",
+          "file": "images/logo_misc.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_STARCITIZEN",
+          "file": "images/logo_starcitizen.png"
         }
       ]
     }

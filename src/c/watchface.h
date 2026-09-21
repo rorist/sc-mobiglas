@@ -75,6 +75,10 @@ LayoutInfo layout_compute(GRect screen_bounds, uint8_t config);
 // Current active config bitmask (source of truth kept in watchface.c)
 uint8_t watchface_get_config(void);
 
+// Constructor logo displayed right of the time (0 = none, 1-6 = logo id)
+uint8_t watchface_get_logo(void);
+void watchface_set_logo(uint8_t logo);
+
 // ---------------------------------------------------------------------------
 // Watchface lifecycle
 // ---------------------------------------------------------------------------

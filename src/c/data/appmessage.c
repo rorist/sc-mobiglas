@@ -1,6 +1,8 @@
 #include "appmessage.h"
+#include "storage.h"
 #include "../watchface.h"
 #include "../panels/environ_panel.h"
+#include <stdlib.h>
 
 // ---------------------------------------------------------------------------
 // AppMessage inbox — dispatch phone data to panels
@@ -54,6 +56,20 @@ static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
         set ? set->value->cstring : NULL);
   }
 
+  // Constructor logo — Clay "select" sends a CString ("0".."6")
+  Tuple *logo = dict_find(iter, MESSAGE_KEY_KEY_LOGO);
+  if (logo) {
+    int logo_val = 0;
+    if (logo->type == TUPLE_CSTRING) {
+      logo_val = atoi(logo->value->cstring);
+    } else {
+      logo_val = (int)logo->value->int32;
+    }
+    if (logo_val < 0 || logo_val > 6) logo_val = 0;
+    watchface_set_logo((uint8_t)logo_val);
+    storage_save_logo((uint8_t)logo_val);
+  }
+
   // Config — Clay sends each toggle as Int32 (1/0); rebuild the bitmask
   uint8_t config = watchface_get_config();
   uint8_t new_config = config;
@@ -65,7 +81,7 @@ static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
   if (new_config != config) {
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Config: 0x%02x -> 0x%02x", config, new_config);
     watchface_update_config(new_config);
-    // TODO: persist via storage (see todo-list, data layer)
+    storage_save_config(new_config);
   }
 }
 

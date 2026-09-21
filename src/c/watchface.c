@@ -4,10 +4,12 @@
 #include "panels/environ_panel.h"
 #include "panels/systems_panel.h"
 #include "ui/fonts.h"
+#include "data/storage.h"
 
 static Layer *s_root_layer;
 static Layer *s_panel_layers[PANEL_COUNT];
 static uint8_t s_config = CONFIG_DEFAULT;
+static uint8_t s_logo = 0;
 static GRect s_screen_bounds;
 
 // ---------------------------------------------------------------------------
@@ -71,6 +73,10 @@ void watchface_create(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   s_screen_bounds = layer_get_bounds(window_layer);
 
+  // Restore persisted settings (config bitmask + constructor logo)
+  s_config = storage_load_config();
+  s_logo = storage_load_logo();
+
   // Load fonts
   fonts_init();
 
@@ -109,6 +115,16 @@ void watchface_tick(struct tm *tick_time, TimeUnits units_changed) {
 
 uint8_t watchface_get_config(void) {
   return s_config;
+}
+
+uint8_t watchface_get_logo(void) {
+  return s_logo;
+}
+
+void watchface_set_logo(uint8_t logo) {
+  if (logo == s_logo) return;
+  s_logo = logo;
+  time_panel_refresh();
 }
 
 void watchface_update_config(uint8_t config) {

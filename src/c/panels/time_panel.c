@@ -1,9 +1,30 @@
 #include "time_panel.h"
 #include "panel.h"
+#include "../watchface.h"
 
 static Layer *s_layer;
 static char s_time_buf[6];   // "HH:MM\0"
 static char s_date_buf[16];  // "TUE 01 JUL\0"
+static GBitmap *s_logo_bmp;
+
+// (Re)load the constructor logo bitmap matching watchface_get_logo()
+static void prv_load_logo(void) {
+  if (s_logo_bmp) {
+    gbitmap_destroy(s_logo_bmp);
+    s_logo_bmp = NULL;
+  }
+  uint32_t res;
+  switch (watchface_get_logo()) {
+    case 1:  res = RESOURCE_ID_IMAGE_LOGO_AEGIS;       break;
+    case 2:  res = RESOURCE_ID_IMAGE_LOGO_ANVIL;       break;
+    case 3:  res = RESOURCE_ID_IMAGE_LOGO_CRUSADER;    break;
+    case 4:  res = RESOURCE_ID_IMAGE_LOGO_RSI;         break;
+    case 5:  res = RESOURCE_ID_IMAGE_LOGO_MISC;        break;
+    case 6:  res = RESOURCE_ID_IMAGE_LOGO_STARCITIZEN; break;
+    default: return;
+  }
+  s_logo_bmp = gbitmap_create_with_resource(res);
+}
 
 static void prv_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
@@ -12,33 +33,50 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   panel_draw_header_full(ctx, bounds, "NAVCOMP", COLOR_PRIMARY);
 
   // Content block: 52px time + 3px gap + 18px date = 73px total
-  // Center this block vertically below the header
   GRect content = panel_content_rect(bounds);
   int block_h = 73;
   int y_offset = content.origin.y + (content.size.h - block_h) / 2;
   if (y_offset < content.origin.y) y_offset = content.origin.y;
 
-  // Time: HH:MM — large centered text, leading-compensated
-  GRect time_rect = GRect(bounds.origin.x + 4,
-                           y_offset - FONT_LEADING_56,
-                           bounds.size.w - 8, 52 + FONT_LEADING_56);
+  const int l56 = FONT_LEADING_56;
+  const int l18 = FONT_LEADING_18;
+
+  // Time zone: full content width, or reduced when a logo is displayed
+  GRect logo_bounds = s_logo_bmp ? gbitmap_get_bounds(s_logo_bmp) : GRectZero;
+  int time_w = content.size.w;
+  if (s_logo_bmp) time_w -= logo_bounds.size.w + 6;
+  GRect time_rect = GRect(content.origin.x, y_offset - l56,
+                          time_w, 52 + l56);
+
   graphics_context_set_text_color(ctx, COLOR_TEXT);
   graphics_draw_text(ctx, s_time_buf, fonts_get(FONT_SIZE_TIME_BIG), time_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 
-  // Date: DOW DD MON — smaller centered text below time, leading-compensated
-  GRect date_rect = GRect(bounds.origin.x + 4,
-                           y_offset + 52 + 3 - FONT_LEADING_18,
-                           bounds.size.w - 8, 18 + FONT_LEADING_18);
+  // Date: DOW DD MON — full content width, centered below time
+  GRect date_rect = GRect(content.origin.x,
+                           y_offset + 52 + 3 - l18,
+                           content.size.w, 18 + l18);
   graphics_draw_text(ctx, s_date_buf, fonts_get(FONT_SIZE_VALUE), date_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
+
+  // Constructor logo — right side, vertically centered on the time line
+  if (s_logo_bmp) {
+    GRect logo_rect = GRect(
+        content.origin.x + content.size.w - logo_bounds.size.w,
+        y_offset + (52 - logo_bounds.size.h) / 2,
+        logo_bounds.size.w, logo_bounds.size.h);
+    graphics_context_set_compositing_mode(ctx, GCompOpSet);
+    graphics_draw_bitmap_in_rect(ctx, s_logo_bmp, logo_rect);
+  }
 }
 
 Layer *time_panel_create(GRect bounds) {
   s_layer = layer_create(bounds);
   layer_set_update_proc(s_layer, prv_update_proc);
+
+  prv_load_logo();
 
   // Initialize with current time
   time_t now = time(NULL);
@@ -49,6 +87,10 @@ Layer *time_panel_create(GRect bounds) {
 }
 
 void time_panel_destroy(void) {
+  if (s_logo_bmp) {
+    gbitmap_destroy(s_logo_bmp);
+    s_logo_bmp = NULL;
+  }
   if (s_layer) {
     layer_destroy(s_layer);
     s_layer = NULL;
@@ -72,6 +114,11 @@ void time_panel_update(struct tm *tick_time) {
     if (*p >= 'a' && *p <= 'z') *p -= 32;
   }
 
+  if (s_layer) layer_mark_dirty(s_layer);
+}
+
+void time_panel_refresh(void) {
+  prv_load_logo();
   if (s_layer) layer_mark_dirty(s_layer);
 }
 
