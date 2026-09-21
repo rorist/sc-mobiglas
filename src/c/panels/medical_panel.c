@@ -48,6 +48,11 @@ static void prv_refresh_health(void) {
 }
 
 static void prv_update_proc(Layer *layer, GContext *ctx) {
+  // Re-read health at draw time (cheap cached reads, no sensor wakeups):
+  // the panel is marked dirty every minute by watchface_tick, so HR/steps
+  // stay fresh without any extra timer or health event subscription.
+  prv_refresh_health();
+
   GRect bounds = layer_get_bounds(layer);
   panel_draw_header_full(ctx, bounds, "MEDICAL", COLOR_PRIMARY);
 

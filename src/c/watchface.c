@@ -119,8 +119,12 @@ void watchface_destroy(void) {
 
 void watchface_tick(struct tm *tick_time, TimeUnits units_changed) {
   time_panel_update(tick_time);
-  // Medical panel refreshes health data on its own schedule
-  // Systems panel auto-refreshes battery on dirty
+  // MEDICAL re-reads health in its update proc when marked dirty;
+  // SYSTEMS auto-refreshes battery on dirty.
+  // (App is already awake for the time update — no extra wakeups.)
+  if (s_panel_layers[PANEL_MEDICAL]) {
+    layer_mark_dirty(s_panel_layers[PANEL_MEDICAL]);
+  }
   if (s_panel_layers[PANEL_SYSTEMS]) {
     layer_mark_dirty(s_panel_layers[PANEL_SYSTEMS]);
   }
