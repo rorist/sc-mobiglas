@@ -78,7 +78,7 @@ module.exports = [
       {
         "type": "button",
         "id": "reset-colors-btn",
-        "label": "Reset colors to defaults"
+        "defaultValue": "Reset colors to defaults"
       }
     ]
   },
