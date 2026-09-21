@@ -27,13 +27,17 @@
     "messageKeys": {
       "KEY_TEMP": 0,
       "KEY_WEATHER": 1,
-      "KEY_EVENT_TITLE": 2,
-      "KEY_EVENT_TIME": 3,
       "KEY_12H": 5,
       "KEY_FAHRENHEIT": 6,
       "KEY_SHOW_MEDICAL": 7,
       "KEY_SHOW_ENVIRON": 8,
-      "KEY_SHOW_SYSTEMS": 9
+      "KEY_SHOW_SYSTEMS": 9,
+      "KEY_WIND_SPEED": 10,
+      "KEY_WIND_DIR": 11,
+      "KEY_HUMIDITY": 12,
+      "KEY_UV": 13,
+      "KEY_SUNRISE": 14,
+      "KEY_SUNSET": 15
     },
     "resources": {
       "media": [

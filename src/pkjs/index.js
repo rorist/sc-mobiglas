@@ -3,8 +3,10 @@
 var Clay = require('@rebble/clay');
 var clayConfig = require('./config');
 var clay = new Clay(clayConfig);
+var Weather = require('./weather');
 
 Pebble.addEventListener('ready', function () {
   console.log('SC mobiGlas PKJS ready');
-  // TODO: weather fetch (weather.js) + calendar send
+  Weather.fetch();
+  setInterval(Weather.fetch, Weather.FETCH_INTERVAL_MS);
 });

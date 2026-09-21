@@ -151,3 +151,89 @@ void draw_dual_ring(GContext *ctx, GRect box,
                       box.size.w - 2 * innerpad, box.size.h - 2 * innerpad);
   draw_ring_gauge(ctx, inner, inner_pct, thickness, COLOR_GAUGE_BG, inner_col);
 }
+
+// ---------------------------------------------------------------------------
+// Weather icons — 10x10px holo-style, color by severity
+// CLEAR/CLOUDY/FOG/UNKNOWN cyan, RAIN/SNOW orange (WARN), STORM red (ALERT)
+// ---------------------------------------------------------------------------
+void draw_weather_icon(GContext *ctx, GPoint origin, int cond_idx) {
+  int x = origin.x;
+  int y = origin.y;
+  GColor col = COLOR_PRIMARY;
+  if (cond_idx == 3 || cond_idx == 4) col = COLOR_WARN;       // RAIN / SNOW
+  else if (cond_idx == 5) col = COLOR_ALERT;                  // STORM
+
+  graphics_context_set_stroke_color(ctx, col);
+  graphics_context_set_fill_color(ctx, col);
+
+  switch (cond_idx) {
+    case 0:  // CLEAR — hollow circle
+      graphics_draw_circle(ctx, GPoint(x + 5, y + 5), 4);
+      break;
+
+    case 1:  // CLOUDY — top dome arc + baseline
+      graphics_draw_arc(ctx, GRect(x + 1, y + 2, 8, 8),
+                        GOvalScaleModeFitCircle,
+                        DEG_TO_TRIGANGLE(0), DEG_TO_TRIGANGLE(180));
+      graphics_draw_line(ctx, GPoint(x + 1, y + 6), GPoint(x + 9, y + 6));
+      break;
+
+    case 2:  // FOG — three staggered horizontal lines
+      graphics_draw_line(ctx, GPoint(x + 1, y + 2), GPoint(x + 9, y + 2));
+      graphics_draw_line(ctx, GPoint(x, y + 5), GPoint(x + 8, y + 5));
+      graphics_draw_line(ctx, GPoint(x + 2, y + 8), GPoint(x + 9, y + 8));
+      break;
+
+    case 3:  // RAIN — small cloud + 2 slanted drops
+      graphics_draw_arc(ctx, GRect(x + 2, y, 6, 6), GOvalScaleModeFitCircle,
+                        DEG_TO_TRIGANGLE(0), DEG_TO_TRIGANGLE(180));
+      graphics_draw_line(ctx, GPoint(x + 2, y + 3), GPoint(x + 8, y + 3));
+      graphics_draw_line(ctx, GPoint(x + 4, y + 6), GPoint(x + 3, y + 9));
+      graphics_draw_line(ctx, GPoint(x + 7, y + 6), GPoint(x + 6, y + 9));
+      break;
+
+    case 4:  // SNOW — 6-armed star
+      graphics_draw_line(ctx, GPoint(x + 5, y + 1), GPoint(x + 5, y + 9));
+      graphics_draw_line(ctx, GPoint(x + 2, y + 2), GPoint(x + 8, y + 8));
+      graphics_draw_line(ctx, GPoint(x + 8, y + 2), GPoint(x + 2, y + 8));
+      break;
+
+    case 5:  // STORM — lightning bolt polyline
+      graphics_draw_line(ctx, GPoint(x + 6, y), GPoint(x + 2, y + 5));
+      graphics_draw_line(ctx, GPoint(x + 2, y + 5), GPoint(x + 5, y + 5));
+      graphics_draw_line(ctx, GPoint(x + 5, y + 5), GPoint(x + 3, y + 9));
+      break;
+
+    default:  // UNKNOWN — hollow square
+      graphics_draw_rect(ctx, GRect(x + 2, y + 2, 6, 6));
+      break;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sun icons — 8x8px holo-style for the sunrise/sunset line
+// sunset=false: sun (hollow circle + 8 rays), sunset=true: half moon
+// ---------------------------------------------------------------------------
+void draw_sun_icon(GContext *ctx, GPoint origin, bool sunset) {
+  int x = origin.x;
+  int y = origin.y;
+  graphics_context_set_stroke_color(ctx, COLOR_PRIMARY);
+
+  if (!sunset) {
+    // Sun — hollow circle r2 centered (4,4) + 8 rays
+    graphics_draw_circle(ctx, GPoint(x + 4, y + 4), 2);
+    graphics_draw_line(ctx, GPoint(x + 4, y + 0), GPoint(x + 4, y + 1));
+    graphics_draw_line(ctx, GPoint(x + 4, y + 6), GPoint(x + 4, y + 7));
+    graphics_draw_line(ctx, GPoint(x + 0, y + 4), GPoint(x + 1, y + 4));
+    graphics_draw_line(ctx, GPoint(x + 6, y + 4), GPoint(x + 7, y + 4));
+    graphics_draw_line(ctx, GPoint(x + 1, y + 1), GPoint(x + 2, y + 2));
+    graphics_draw_line(ctx, GPoint(x + 6, y + 2), GPoint(x + 7, y + 1));
+    graphics_draw_line(ctx, GPoint(x + 1, y + 7), GPoint(x + 2, y + 6));
+    graphics_draw_line(ctx, GPoint(x + 6, y + 6), GPoint(x + 7, y + 7));
+  } else {
+    // Moon — right-half arc + vertical chord
+    graphics_draw_arc(ctx, GRect(x + 2, y + 2, 4, 4), GOvalScaleModeFitCircle,
+                      DEG_TO_TRIGANGLE(0), DEG_TO_TRIGANGLE(180));
+    graphics_draw_line(ctx, GPoint(x + 4, y + 2), GPoint(x + 4, y + 6));
+  }
+}

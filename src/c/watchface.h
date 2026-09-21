@@ -11,6 +11,7 @@
 #define COLOR_PANEL_BG   GColorOxfordBlue
 #define COLOR_TEXT       GColorVividCerulean
 #define COLOR_WARN       GColorOrange
+#define COLOR_ALERT      GColorRed
 #define COLOR_SAFE       GColorMalachite
 #define COLOR_GAUGE_BG   GColorCobaltBlue
 

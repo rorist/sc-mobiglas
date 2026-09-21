@@ -27,13 +27,31 @@ static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
             (void *)temp, (void *)cond);
   }
 
-  // Calendar: next event title + Unix epoch
-  Tuple *evt_title = dict_find(iter, MESSAGE_KEY_KEY_EVENT_TITLE);
-  Tuple *evt_time = dict_find(iter, MESSAGE_KEY_KEY_EVENT_TIME);
-  if (evt_title || evt_time) {
-    const char *title = evt_title ? evt_title->value->cstring : NULL;
-    uint32_t epoch = evt_time ? (uint32_t)evt_time->value->int32 : 0;
-    environ_panel_set_event(title, epoch);
+  // Wind: speed (Int16 km/h) + direction (Int16 degrees)
+  Tuple *wind_spd = dict_find(iter, MESSAGE_KEY_KEY_WIND_SPEED);
+  Tuple *wind_dir = dict_find(iter, MESSAGE_KEY_KEY_WIND_DIR);
+  if (wind_spd || wind_dir) {
+    environ_panel_set_wind(
+        wind_spd ? (int16_t)wind_spd->value->int16 : (int16_t)-1,
+        wind_dir ? (int16_t)wind_dir->value->int16 : (int16_t)-1);
+  }
+
+  // Humidity (Int8 %) + UV index (Int8)
+  Tuple *hum = dict_find(iter, MESSAGE_KEY_KEY_HUMIDITY);
+  Tuple *uv = dict_find(iter, MESSAGE_KEY_KEY_UV);
+  if (hum || uv) {
+    environ_panel_set_humidity_uv(
+        hum ? (int8_t)hum->value->int8 : (int8_t)-1,
+        uv ? (int8_t)uv->value->int8 : (int8_t)-1);
+  }
+
+  // Sun times (CString "HH:MM", formatted phone-side)
+  Tuple *rise = dict_find(iter, MESSAGE_KEY_KEY_SUNRISE);
+  Tuple *set = dict_find(iter, MESSAGE_KEY_KEY_SUNSET);
+  if (rise || set) {
+    environ_panel_set_sun(
+        rise ? rise->value->cstring : NULL,
+        set ? set->value->cstring : NULL);
   }
 
   // Config — Clay sends each toggle as Int32 (1/0); rebuild the bitmask
