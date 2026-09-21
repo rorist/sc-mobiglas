@@ -43,7 +43,7 @@
 #define TIME_MIN_H     78  // 48px font + date + chrome
 #define MEDICAL_MIN_H  70  // header + 2 data rows
 #define ENVIRON_MIN_H  70  // header + 3 data rows
-#define SYSTEMS_MIN_H  44  // header + battery bar
+#define SYSTEMS_MIN_H  32  // compact header (BAT inline) + battery bar
 
 // ---------------------------------------------------------------------------
 // Config bitmask (from KEY_CONFIG AppMessage)

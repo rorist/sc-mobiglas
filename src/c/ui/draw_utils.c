@@ -37,8 +37,10 @@ void draw_corner_accents(GContext *ctx, GRect bounds, GColor color) {
   graphics_draw_line(ctx, GPoint(x1 - leg, y1), GPoint(x1, y1));
 }
 
-void draw_panel_header(GContext *ctx, GRect bounds, const char *title,
-                       GFont font, GColor color) {
+// Extended header: accent bar + title (left) + optional right-aligned label
+// + partial underline + arrow glyph. right_label == NULL -> title-only layout.
+void draw_panel_header_ex(GContext *ctx, GRect bounds, const char *title,
+                          const char *right_label, GFont font, GColor color) {
   int x = bounds.origin.x;
   int y = bounds.origin.y;
   int w = bounds.size.w;
@@ -49,26 +51,50 @@ void draw_panel_header(GContext *ctx, GRect bounds, const char *title,
   graphics_draw_line(ctx, GPoint(x + 4, y + 3), GPoint(x + 4, y + 10));
   graphics_draw_line(ctx, GPoint(x + 5, y + 3), GPoint(x + 5, y + 10));
 
-  // Header text after accent bar
-  GRect header_rect = GRect(x + 8, y + 1, w - 16, 14);
+  // Right-side diagonal arrow glyph (up-right): at top-right corner
+  int bx = x + w - 4;   // shaft top-right (tip)
+  int by = y + 4;
+  graphics_draw_line(ctx, GPoint(x + w - 10, y + 10), GPoint(bx, by)); // diagonal shaft
+  graphics_draw_line(ctx, GPoint(bx, by), GPoint(bx - 4, by)); // left barb
+  graphics_draw_line(ctx, GPoint(bx, by), GPoint(bx, by + 4)); // down barb
+
+  // Header text: title left-aligned, optional right_label right-aligned
   graphics_context_set_text_color(ctx, color);
+  int title_w = w - 16;  // default zone: x+8 .. x+w-8
+  int label_left = -1;
+  if (right_label) {
+    GRect measure_box = GRect(x + 8, y + 1, w - 24, 14);
+    GSize label_size = graphics_text_layout_get_content_size(
+        right_label, font, measure_box,
+        GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft);
+    int label_w = label_size.w;
+    label_left = (x + w - 12) - label_w;  // 2px gap before arrow zone
+    GRect label_rect = GRect(label_left, y + 1, label_w, 14);
+    graphics_draw_text(ctx, right_label, font, label_rect,
+                       GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentRight, NULL);
+    title_w = (label_left - 4) - (x + 8);
+    if (title_w < 0) {
+      title_w = 0;
+    }
+  }
+  GRect header_rect = GRect(x + 8, y + 1, title_w, 14);
   graphics_draw_text(ctx, title, font, header_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
 
-  // Partial underline: from accent bar to ~60% width
+  // Partial underline: from accent bar to ~60% width, clipped before right label
   int underline_y = y + 14;
   int line_end = x + 4 + (w - 8) * 6 / 10;
+  if (right_label && label_left >= 0 && line_end > label_left - 4) {
+    line_end = label_left - 4;
+  }
   graphics_draw_line(ctx, GPoint(x + 4, underline_y), GPoint(line_end, underline_y));
+}
 
-  // Right-side diagonal arrow glyph (up-right): at top-right corner
-  int ax = x + w - 10;  // shaft bottom-left
-  int ay = y + 10;
-  int bx = x + w - 4;   // shaft top-right (tip)
-  int by = y + 4;
-  graphics_draw_line(ctx, GPoint(ax, ay), GPoint(bx, by));   // diagonal shaft
-  graphics_draw_line(ctx, GPoint(bx, by), GPoint(bx - 4, by)); // left barb
-  graphics_draw_line(ctx, GPoint(bx, by), GPoint(bx, by + 4)); // down barb
+void draw_panel_header(GContext *ctx, GRect bounds, const char *title,
+                       GFont font, GColor color) {
+  draw_panel_header_ex(ctx, bounds, title, NULL, font, color);
 }
 
 void draw_battery_bar(GContext *ctx, GRect bounds, int percent, GColor color) {

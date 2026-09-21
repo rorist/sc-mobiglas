@@ -22,6 +22,16 @@ static inline void panel_draw_header_full(GContext *ctx, GRect bounds,
   draw_panel_header(ctx, bounds, title, fonts_get(FONT_SIZE_HEADER), color);
 }
 
+// Draw chrome + header with optional right-aligned label
+static inline void panel_draw_header_with_right(GContext *ctx, GRect bounds,
+                                                const char *title,
+                                                const char *right_label,
+                                                GColor color) {
+  panel_draw_chrome(ctx, bounds, color);
+  draw_panel_header_ex(ctx, bounds, title, right_label,
+                       fonts_get(FONT_SIZE_HEADER), color);
+}
+
 // Content area: the usable rect below the header (below underline at y+16)
 static inline GRect panel_content_rect(GRect bounds) {
   return GRect(bounds.origin.x + 4, bounds.origin.y + 16,
