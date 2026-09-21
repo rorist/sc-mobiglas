@@ -63,13 +63,14 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
 
   bool compact = (cw < 120);
   if (compact) {
-    // Two side-by-side mini ring gauges, values + labels below (SC style)
-    int rd = ch - 31;
-    if (rd > 28) rd = 28;
+    // Two side-by-side mini ring gauges, values inside rings, labels below
+    int rd = ch - 17;                   // ring + 2px gap + 14px label
+    int rd_max = cw / 2 - 8;            // fit within own column
+    if (rd > rd_max) rd = rd_max;
     if (rd < 20) rd = 20;
     int col_l = cx + cw / 4 - rd / 2;
     int col_r = cx + 3 * cw / 4 - rd / 2;
-    int y0 = cy + (ch - (rd + 31)) / 2;
+    int y0 = cy + (ch - (rd + 16)) / 2; // block (ring+label) centered below header
     if (y0 < cy) y0 = cy;
 
     draw_ring_gauge(ctx, GRect(col_l, y0, rd, rd),
@@ -77,17 +78,17 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     draw_ring_gauge(ctx, GRect(col_r, y0, rd, rd),
                     s_steps_pct, 3, COLOR_SECONDARY, COLOR_PRIMARY);
 
-    // Values centered inside rings, labels below (SC style)
+    // Values centered inside rings (-2px: Pebble text padding), labels below
     graphics_draw_text(ctx, s_hr_buf, fonts_get(FONT_SIZE_HEADER),
-                       GRect(col_l, y0 + (rd - 14) / 2, rd, 14),
+                       GRect(col_l, y0 + (rd - 14) / 2 - 2, rd, 14),
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentCenter, NULL);
     graphics_draw_text(ctx, s_steps_buf, fonts_get(FONT_SIZE_HEADER),
-                       GRect(col_r, y0 + (rd - 14) / 2, rd, 14),
+                       GRect(col_r, y0 + (rd - 14) / 2 - 2, rd, 14),
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentCenter, NULL);
 
-    int lbl_y = y0 + rd + 1;
+    int lbl_y = y0 + rd + 2;
     graphics_draw_text(ctx, "BPM", fonts_get(FONT_SIZE_HEADER),
                        GRect(cx, lbl_y, cw / 2, 14),
                        GTextOverflowModeTrailingEllipsis,
