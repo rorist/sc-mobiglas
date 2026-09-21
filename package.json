@@ -33,8 +33,7 @@
       "KEY_FAHRENHEIT": 6,
       "KEY_SHOW_MEDICAL": 7,
       "KEY_SHOW_ENVIRON": 8,
-      "KEY_SHOW_SYSTEMS": 9,
-      "KEY_SECONDS": 10
+      "KEY_SHOW_SYSTEMS": 9
     },
     "resources": {
       "media": [

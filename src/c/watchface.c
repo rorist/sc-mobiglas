@@ -115,6 +115,7 @@ void watchface_update_config(uint8_t config) {
   if (config == s_config) return;
   s_config = config;
   prv_rebuild_panels();
+  environ_panel_refresh_config();  // re-format temp (°C/°F) from last data
 
   // Trigger immediate time update
   time_t now = time(NULL);

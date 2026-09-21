@@ -2,10 +2,27 @@
 #include "panel.h"
 
 static Layer *s_layer;
-static char s_temp_buf[12];     // "-12" or "--"
+static char s_temp_buf[12];     // "-12°C" or "--°C"
 static char s_cond_buf[12];     // "CLOUDY"
 static char s_event_buf[20];    // "Meeting..."
 static char s_evtime_buf[8];    // "14:30"
+
+// Last known temperature in canonical Celsius; sentinel = never received
+#define TEMP_UNAVAILABLE ((int8_t)-128)
+static int8_t s_last_temp_c = TEMP_UNAVAILABLE;
+
+// Format s_temp_buf from s_last_temp_c per current config (°C/°F)
+static void prv_format_temp(void) {
+  if (s_last_temp_c == TEMP_UNAVAILABLE) {
+    snprintf(s_temp_buf, sizeof(s_temp_buf),
+             (watchface_get_config() & CONFIG_FAHRENHEIT) ? "--\u00b0F" : "--\u00b0C");
+  } else if (watchface_get_config() & CONFIG_FAHRENHEIT) {
+    int f = (int)s_last_temp_c * 9 / 5 + 32;
+    snprintf(s_temp_buf, sizeof(s_temp_buf), "%d\u00b0F", f);
+  } else {
+    snprintf(s_temp_buf, sizeof(s_temp_buf), "%d\u00b0C", (int)s_last_temp_c);
+  }
+}
 
 static void prv_draw_pipe(GContext *ctx, int x, int y, GColor color) {
   graphics_context_set_stroke_color(ctx, color);
@@ -62,7 +79,8 @@ Layer *environ_panel_create(GRect bounds) {
   s_layer = layer_create(bounds);
   layer_set_update_proc(s_layer, prv_update_proc);
 
-  snprintf(s_temp_buf, sizeof(s_temp_buf), "--\u00b0C");
+  // Keep s_last_temp_c across rebuilds so config changes re-display last data
+  prv_format_temp();
   snprintf(s_cond_buf, sizeof(s_cond_buf), "---");
   snprintf(s_event_buf, sizeof(s_event_buf), "EVT: ---");
   s_evtime_buf[0] = '\0';
@@ -85,11 +103,17 @@ void environ_panel_update_bounds(GRect bounds) {
 }
 
 void environ_panel_set_weather(int8_t temp_c, const char *condition) {
-  snprintf(s_temp_buf, sizeof(s_temp_buf), "%d\u00b0C", (int)temp_c);
+  s_last_temp_c = temp_c;
+  prv_format_temp();
   if (condition) {
     strncpy(s_cond_buf, condition, sizeof(s_cond_buf) - 1);
     s_cond_buf[sizeof(s_cond_buf) - 1] = '\0';
   }
+  if (s_layer) layer_mark_dirty(s_layer);
+}
+
+void environ_panel_refresh_config(void) {
+  prv_format_temp();
   if (s_layer) layer_mark_dirty(s_layer);
 }
 

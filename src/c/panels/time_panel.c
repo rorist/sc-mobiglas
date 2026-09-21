@@ -56,7 +56,14 @@ void time_panel_destroy(void) {
 }
 
 void time_panel_update(struct tm *tick_time) {
-  strftime(s_time_buf, sizeof(s_time_buf), "%H:%M", tick_time);
+  if (watchface_get_config() & CONFIG_12H) {
+    strftime(s_time_buf, sizeof(s_time_buf), "%I:%M", tick_time);
+    if (s_time_buf[0] == '0') {
+      memmove(s_time_buf, s_time_buf + 1, sizeof(s_time_buf) - 1);
+    }
+  } else {
+    strftime(s_time_buf, sizeof(s_time_buf), "%H:%M", tick_time);
+  }
 
   strftime(s_date_buf, sizeof(s_date_buf), "%a %d %b", tick_time);
 

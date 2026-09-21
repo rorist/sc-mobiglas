@@ -44,7 +44,6 @@ static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
   new_config = prv_apply_toggle(iter, MESSAGE_KEY_KEY_SHOW_MEDICAL, new_config, CONFIG_MEDICAL);
   new_config = prv_apply_toggle(iter, MESSAGE_KEY_KEY_SHOW_ENVIRON, new_config, CONFIG_ENVIRON);
   new_config = prv_apply_toggle(iter, MESSAGE_KEY_KEY_SHOW_SYSTEMS, new_config, CONFIG_SYSTEMS);
-  new_config = prv_apply_toggle(iter, MESSAGE_KEY_KEY_SECONDS, new_config, CONFIG_SECONDS);
   if (new_config != config) {
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Config: 0x%02x -> 0x%02x", config, new_config);
     watchface_update_config(new_config);
