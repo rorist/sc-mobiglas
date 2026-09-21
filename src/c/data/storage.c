@@ -84,3 +84,4 @@ void storage_save_color_header(GColor color) {
 void storage_save_color_warn(GColor color) {
   persist_write_int(PERSIST_KEY_COLOR_WARN, (int32_t)color.argb);
 }
+

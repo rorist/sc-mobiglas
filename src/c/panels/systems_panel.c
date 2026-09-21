@@ -12,8 +12,8 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   BatteryChargeState bat = battery_state_service_peek();
   snprintf(s_bat_buf, sizeof(s_bat_buf), "BAT: %d%%", bat.charge_percent);
 
-  // Semantic color: charging=green, low(<=20%)=orange, else primary
-  GColor bat_col = COLOR_PRIMARY;
+  // Semantic color: charging=green, low(<=20%)=warn, else value color
+  GColor bat_col = watchface_get_color_value();
   if (bat.is_charging) {
     bat_col = COLOR_SAFE;
   } else if (bat.charge_percent <= 20) {
@@ -21,7 +21,8 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   }
 
   // Chrome + header (label left, battery right)
-  panel_draw_header_with_right(ctx, bounds, "SYSTEMS", s_bat_buf, COLOR_PRIMARY);
+  panel_draw_header_with_right(ctx, bounds, "SYSTEMS", s_bat_buf,
+                               COLOR_PRIMARY, bat_col);
 
   // Battery bar centered in the content area below the header
   GRect content = panel_content_rect(bounds);

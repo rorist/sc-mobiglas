@@ -90,7 +90,8 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   int w = content.size.w;
   int ch = content.size.h;
 
-  graphics_context_set_text_color(ctx, watchface_get_color_label());
+  // All ENVIRON lines are measured values, not labels
+  graphics_context_set_text_color(ctx, watchface_get_color_value());
 
   const int line_h = 14;
   const int gap = 1;
@@ -107,11 +108,9 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
   GRect temp_rect = GRect(x + w - 32, y0 - l14, 32, line_h + l14);
-  graphics_context_set_text_color(ctx, watchface_get_color_value());
   graphics_draw_text(ctx, s_temp_buf, fonts_get(FONT_SIZE_HEADER), temp_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentRight, NULL);
-  graphics_context_set_text_color(ctx, watchface_get_color_label());
 
   // Line 2: wind icon + wind text
   draw_wind_icon(ctx, GPoint(x, y0 + 15 + 3));

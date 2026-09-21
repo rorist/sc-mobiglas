@@ -40,7 +40,8 @@ void draw_corner_accents(GContext *ctx, GRect bounds, GColor color) {
 // Extended header: accent bar + title (left) + optional right-aligned label
 // + partial underline + arrow glyph. right_label == NULL -> title-only layout.
 void draw_panel_header_ex(GContext *ctx, GRect bounds, const char *title,
-                          const char *right_label, GFont font, GColor color) {
+                          const char *right_label, GFont font, GColor color,
+                          GColor right_color) {
   int x = bounds.origin.x;
   int y = bounds.origin.y;
   int w = bounds.size.w;
@@ -70,9 +71,11 @@ void draw_panel_header_ex(GContext *ctx, GRect bounds, const char *title,
     int label_w = label_size.w;
     label_left = (x + w - 12) - label_w;  // 2px gap before arrow zone
     GRect label_rect = GRect(label_left, y + 1, label_w, 14);
+    graphics_context_set_text_color(ctx, right_color);
     graphics_draw_text(ctx, right_label, font, label_rect,
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentRight, NULL);
+    graphics_context_set_text_color(ctx, color);
     title_w = (label_left - 4) - (x + 8);
     if (title_w < 0) {
       title_w = 0;
@@ -94,7 +97,7 @@ void draw_panel_header_ex(GContext *ctx, GRect bounds, const char *title,
 
 void draw_panel_header(GContext *ctx, GRect bounds, const char *title,
                        GFont font, GColor color) {
-  draw_panel_header_ex(ctx, bounds, title, NULL, font, color);
+  draw_panel_header_ex(ctx, bounds, title, NULL, font, color, color);
 }
 
 void draw_battery_bar(GContext *ctx, GRect bounds, int percent, GColor color) {

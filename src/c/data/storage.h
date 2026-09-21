@@ -22,3 +22,4 @@ void storage_save_color_value(GColor color);
 void storage_save_color_label(GColor color);
 void storage_save_color_header(GColor color);
 void storage_save_color_warn(GColor color);
+

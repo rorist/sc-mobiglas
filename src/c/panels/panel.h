@@ -25,14 +25,17 @@ static inline void panel_draw_header_full(GContext *ctx, GRect bounds,
 }
 
 // Draw chrome + header with optional right-aligned label
+// color = chrome/border color; header text uses configurable header color;
+// right_color = color of the right label (e.g. battery value)
 static inline void panel_draw_header_with_right(GContext *ctx, GRect bounds,
                                                 const char *title,
                                                 const char *right_label,
-                                                GColor color) {
+                                                GColor color,
+                                                GColor right_color) {
   panel_draw_chrome(ctx, bounds, color);
   draw_panel_header_ex(ctx, bounds, title, right_label,
                        fonts_get(FONT_SIZE_HEADER),
-                       watchface_get_color_header());
+                       watchface_get_color_header(), right_color);
 }
 
 // Content area: the usable rect below the header (below underline at y+16)

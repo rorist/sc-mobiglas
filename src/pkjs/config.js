@@ -55,13 +55,13 @@ module.exports = [
         "type": "color",
         "messageKey": "KEY_COLOR_VALUE",
         "label": "Value color",
-        "defaultValue": "#55aaff"
+        "defaultValue": "#ffffff"
       },
       {
         "type": "color",
         "messageKey": "KEY_COLOR_LABEL",
         "label": "Label color",
-        "defaultValue": "#00aaff"
+        "defaultValue": "#55aaff"
       },
       {
         "type": "color",
@@ -77,7 +77,7 @@ module.exports = [
       },
       {
         "type": "button",
-        "defaultValue": 1,
+        "id": "reset-colors-btn",
         "label": "Reset colors to defaults"
       }
     ]

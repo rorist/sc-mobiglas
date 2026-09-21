@@ -16,8 +16,8 @@
 
 // Configurable text colors (runtime, set via settings) — see getters below
 #define COLOR_TIME_DEFAULT   GColorCeleste
-#define COLOR_VALUE_DEFAULT  GColorPictonBlue
-#define COLOR_LABEL_DEFAULT  GColorVividCerulean
+#define COLOR_VALUE_DEFAULT  GColorWhite
+#define COLOR_LABEL_DEFAULT  GColorPictonBlue
 #define COLOR_HEADER_DEFAULT GColorVividCerulean
 #define COLOR_WARN_DEFAULT   GColorOrange
 
