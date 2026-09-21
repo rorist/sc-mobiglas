@@ -78,23 +78,27 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     draw_ring_gauge(ctx, GRect(col_r, y0, rd, rd),
                     s_steps_pct, 3, COLOR_SECONDARY, COLOR_PRIMARY);
 
-    // Values centered inside rings (-2px: Pebble text padding), labels below
+    // Values centered inside rings (leading-compensated), labels below
     graphics_draw_text(ctx, s_hr_buf, fonts_get(FONT_SIZE_HEADER),
-                       GRect(col_l, y0 + (rd - 14) / 2 - 2, rd, 14),
+                       GRect(col_l, y0 + (rd - 14) / 2 - FONT_LEADING_14,
+                             rd, 14 + FONT_LEADING_14),
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentCenter, NULL);
     graphics_draw_text(ctx, s_steps_buf, fonts_get(FONT_SIZE_HEADER),
-                       GRect(col_r, y0 + (rd - 14) / 2 - 2, rd, 14),
+                       GRect(col_r, y0 + (rd - 14) / 2 - FONT_LEADING_14,
+                             rd, 14 + FONT_LEADING_14),
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentCenter, NULL);
 
     int lbl_y = y0 + rd + 2;
     graphics_draw_text(ctx, "BPM", fonts_get(FONT_SIZE_HEADER),
-                       GRect(cx, lbl_y, cw / 2, 14),
+                       GRect(cx, lbl_y - FONT_LEADING_14, cw / 2,
+                             14 + FONT_LEADING_14),
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentCenter, NULL);
     graphics_draw_text(ctx, "STEPS", fonts_get(FONT_SIZE_HEADER),
-                       GRect(cx + cw / 2, lbl_y, cw / 2, 14),
+                       GRect(cx + cw / 2, lbl_y - FONT_LEADING_14, cw / 2,
+                             14 + FONT_LEADING_14),
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentCenter, NULL);
   } else {
@@ -107,19 +111,21 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
 
     draw_dual_ring(ctx, ring_box, s_hr_pct, hr_col, s_steps_pct, COLOR_PRIMARY);
 
-    // BPM centered in ring, labels+values below
-    GRect hr_c = GRect(cx, cy + ring_d / 2 - 12, cw, 20);
+    // BPM centered in ring (leading-compensated), labels+values below
+    GRect hr_c = GRect(cx, cy + ring_d / 2 - 12 - FONT_LEADING_18, cw,
+                       20 + FONT_LEADING_18);
     graphics_draw_text(ctx, s_hr_buf, fonts_get(FONT_SIZE_VALUE), hr_c,
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentCenter, NULL);
     int ty = cy + ring_d + 2;
-    GRect hr_lbl = GRect(cx, ty, cw / 2, 16);
+    GRect hr_lbl = GRect(cx, ty - FONT_LEADING_14, cw / 2, 16 + FONT_LEADING_14);
     graphics_draw_text(ctx, "BPM", fonts_get(FONT_SIZE_HEADER), hr_lbl,
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentLeft, NULL);
     char steps_lbl[20];
     snprintf(steps_lbl, sizeof(steps_lbl), "STEPS %s", s_steps_buf);
-    GRect st_lbl = GRect(cx + cw / 2, ty, cw / 2, 16);
+    GRect st_lbl = GRect(cx + cw / 2, ty - FONT_LEADING_14, cw / 2,
+                         16 + FONT_LEADING_14);
     graphics_draw_text(ctx, steps_lbl, fonts_get(FONT_SIZE_HEADER), st_lbl,
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentRight, NULL);

@@ -8,28 +8,29 @@ static char s_date_buf[16];  // "TUE 01 JUL\0"
 static void prv_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
 
-  // Panel chrome: border + corner accents (no header label for TIME)
-  panel_draw_chrome(ctx, bounds, COLOR_PRIMARY);
+  // Panel chrome + header label
+  panel_draw_header_full(ctx, bounds, "NAVCOMP", COLOR_PRIMARY);
 
-  // Content block: 56px time + 18px date = ~80px total
-  // Center this block vertically within the panel
-  int content_h = 80;
-  int y_offset = (bounds.size.h - content_h) / 2;
-  if (y_offset < 4) y_offset = 4;
+  // Content block: 52px time + 3px gap + 18px date = 73px total
+  // Center this block vertically below the header
+  GRect content = panel_content_rect(bounds);
+  int block_h = 73;
+  int y_offset = content.origin.y + (content.size.h - block_h) / 2;
+  if (y_offset < content.origin.y) y_offset = content.origin.y;
 
-  // Time: HH:MM — large centered text
+  // Time: HH:MM — large centered text, leading-compensated
   GRect time_rect = GRect(bounds.origin.x + 4,
-                           bounds.origin.y + y_offset,
-                           bounds.size.w - 8, 58);
+                           y_offset - FONT_LEADING_56,
+                           bounds.size.w - 8, 52 + FONT_LEADING_56);
   graphics_context_set_text_color(ctx, COLOR_TEXT);
   graphics_draw_text(ctx, s_time_buf, fonts_get(FONT_SIZE_TIME_BIG), time_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 
-  // Date: DOW DD MON — smaller centered text below time
+  // Date: DOW DD MON — smaller centered text below time, leading-compensated
   GRect date_rect = GRect(bounds.origin.x + 4,
-                           bounds.origin.y + y_offset + 58,
-                           bounds.size.w - 8, 20);
+                           y_offset + 52 + 3 - FONT_LEADING_18,
+                           bounds.size.w - 8, 18 + FONT_LEADING_18);
   graphics_draw_text(ctx, s_date_buf, fonts_get(FONT_SIZE_VALUE), date_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
