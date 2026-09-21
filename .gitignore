@@ -1,3 +1,4 @@
 build/
 .serena/
 screenshot.png
+.lock-waf_darwin_build
