@@ -59,30 +59,54 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // HR ring color: safe(green) 50..100 bpm, else warn(orange)
   GColor hr_col = (s_hr_bpm >= 50 && s_hr_bpm <= 100) ? COLOR_SAFE : COLOR_WARN;
 
-  // Ring box: square, centered horizontally, sized to available height
-  int ring_d = ch - 22;             // leave room for values below
-  if (ring_d > cw) ring_d = cw;
-  if (ring_d < 24) ring_d = 24;
-  int ring_x = cx + (cw - ring_d) / 2;
-  GRect ring_box = GRect(ring_x, cy, ring_d, ring_d);
-
-  draw_dual_ring(ctx, ring_box, s_hr_pct, hr_col, s_steps_pct, COLOR_PRIMARY);
-
   graphics_context_set_text_color(ctx, COLOR_TEXT);
 
   bool compact = (cw < 120);
   if (compact) {
-    // BPM value centered inside ring, steps below
-    GRect hr_c = GRect(cx, cy + ring_d / 2 - 12, cw, 20);
-    graphics_draw_text(ctx, s_hr_buf, fonts_get(FONT_SIZE_VALUE), hr_c,
+    // Two side-by-side mini ring gauges, values + labels below (SC style)
+    int rd = ch - 31;
+    if (rd > 28) rd = 28;
+    if (rd < 20) rd = 20;
+    int col_l = cx + cw / 4 - rd / 2;
+    int col_r = cx + 3 * cw / 4 - rd / 2;
+    int y0 = cy + (ch - (rd + 31)) / 2;
+    if (y0 < cy) y0 = cy;
+
+    draw_ring_gauge(ctx, GRect(col_l, y0, rd, rd),
+                    s_hr_pct, 3, COLOR_SECONDARY, hr_col);
+    draw_ring_gauge(ctx, GRect(col_r, y0, rd, rd),
+                    s_steps_pct, 3, COLOR_SECONDARY, COLOR_PRIMARY);
+
+    int val_y = y0 + rd + 1;
+    graphics_draw_text(ctx, s_hr_buf, fonts_get(FONT_SIZE_HEADER),
+                       GRect(cx, val_y, cw / 2, 16),
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentCenter, NULL);
-    GRect st_c = GRect(cx, cy + ring_d + 2, cw, 16);
-    graphics_draw_text(ctx, s_steps_buf, fonts_get(FONT_SIZE_HEADER), st_c,
+    graphics_draw_text(ctx, s_steps_buf, fonts_get(FONT_SIZE_HEADER),
+                       GRect(cx + cw / 2, val_y, cw / 2, 16),
+                       GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentCenter, NULL);
+
+    int lbl_y = val_y + 15;
+    graphics_draw_text(ctx, "BPM", fonts_get(FONT_SIZE_HEADER),
+                       GRect(cx, lbl_y, cw / 2, 14),
+                       GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentCenter, NULL);
+    graphics_draw_text(ctx, "STEPS", fonts_get(FONT_SIZE_HEADER),
+                       GRect(cx + cw / 2, lbl_y, cw / 2, 14),
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentCenter, NULL);
   } else {
-    // Full: BPM centered in ring, labels+values below
+    // Ring box: square, centered horizontally, sized to available height
+    int ring_d = ch - 22;             // leave room for values below
+    if (ring_d > cw) ring_d = cw;
+    if (ring_d < 24) ring_d = 24;
+    int ring_x = cx + (cw - ring_d) / 2;
+    GRect ring_box = GRect(ring_x, cy, ring_d, ring_d);
+
+    draw_dual_ring(ctx, ring_box, s_hr_pct, hr_col, s_steps_pct, COLOR_PRIMARY);
+
+    // BPM centered in ring, labels+values below
     GRect hr_c = GRect(cx, cy + ring_d / 2 - 12, cw, 20);
     graphics_draw_text(ctx, s_hr_buf, fonts_get(FONT_SIZE_VALUE), hr_c,
                        GTextOverflowModeTrailingEllipsis,
