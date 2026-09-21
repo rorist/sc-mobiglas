@@ -43,6 +43,48 @@ module.exports = [
     "items": [
       {
         "type": "heading",
+        "defaultValue": "Panels"
+      },
+      {
+        "type": "toggle",
+        "messageKey": "KEY_SHOW_MEDICAL",
+        "label": "Medical panel",
+        "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "KEY_SHOW_ENVIRON",
+        "label": "Environ panel",
+        "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "KEY_SHOW_SYSTEMS",
+        "label": "Systems panel",
+        "defaultValue": true
+      }
+    ]
+  },
+  {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
+        "defaultValue": "Weather"
+      },
+      {
+        "type": "toggle",
+        "messageKey": "KEY_FAHRENHEIT",
+        "label": "Fahrenheit",
+        "defaultValue": false
+      }
+    ]
+  },
+  {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
         "defaultValue": "Colors"
       },
       {
@@ -79,48 +121,6 @@ module.exports = [
         "type": "button",
         "id": "reset-colors-btn",
         "defaultValue": "Reset colors to defaults"
-      }
-    ]
-  },
-  {
-    "type": "section",
-    "items": [
-      {
-        "type": "heading",
-        "defaultValue": "Weather"
-      },
-      {
-        "type": "toggle",
-        "messageKey": "KEY_FAHRENHEIT",
-        "label": "Fahrenheit",
-        "defaultValue": false
-      }
-    ]
-  },
-  {
-    "type": "section",
-    "items": [
-      {
-        "type": "heading",
-        "defaultValue": "Panels"
-      },
-      {
-        "type": "toggle",
-        "messageKey": "KEY_SHOW_MEDICAL",
-        "label": "Medical panel",
-        "defaultValue": true
-      },
-      {
-        "type": "toggle",
-        "messageKey": "KEY_SHOW_ENVIRON",
-        "label": "Environ panel",
-        "defaultValue": true
-      },
-      {
-        "type": "toggle",
-        "messageKey": "KEY_SHOW_SYSTEMS",
-        "label": "Systems panel",
-        "defaultValue": true
       }
     ]
   },
