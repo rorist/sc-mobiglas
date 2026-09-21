@@ -27,7 +27,8 @@
     ],
     "capabilities": [
       "health",
-      "configurable"
+      "configurable",
+      "location"
     ],
     "watchapp": {
       "watchface": true
