@@ -11,26 +11,26 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // Panel chrome: border + corner accents (no header label for TIME)
   panel_draw_chrome(ctx, bounds, COLOR_PRIMARY);
 
-  // Content block: 48px time + ~16px date = ~68px total
+  // Content block: 56px time + 18px date = ~80px total
   // Center this block vertically within the panel
-  int content_h = 68;
+  int content_h = 80;
   int y_offset = (bounds.size.h - content_h) / 2;
   if (y_offset < 4) y_offset = 4;
 
   // Time: HH:MM — large centered text
   GRect time_rect = GRect(bounds.origin.x + 4,
                            bounds.origin.y + y_offset,
-                           bounds.size.w - 8, 50);
+                           bounds.size.w - 8, 58);
   graphics_context_set_text_color(ctx, COLOR_TEXT);
-  graphics_draw_text(ctx, s_time_buf, fonts_get(FONT_SIZE_TIME), time_rect,
+  graphics_draw_text(ctx, s_time_buf, fonts_get(FONT_SIZE_TIME_BIG), time_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 
   // Date: DOW DD MON — smaller centered text below time
   GRect date_rect = GRect(bounds.origin.x + 4,
-                           bounds.origin.y + y_offset + 50,
-                           bounds.size.w - 8, 18);
-  graphics_draw_text(ctx, s_date_buf, fonts_get(FONT_SIZE_HEADER), date_rect,
+                           bounds.origin.y + y_offset + 58,
+                           bounds.size.w - 8, 20);
+  graphics_draw_text(ctx, s_date_buf, fonts_get(FONT_SIZE_VALUE), date_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 }

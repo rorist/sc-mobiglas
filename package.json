@@ -41,6 +41,12 @@
           "name": "FONT_RAJDHANI_48",
           "file": "fonts/rajdhani-medium.ttf",
           "characterRegex": "[0-9: ]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_RAJDHANI_56",
+          "file": "fonts/rajdhani-medium.ttf",
+          "characterRegex": "[0-9: ]"
         }
       ]
     }
