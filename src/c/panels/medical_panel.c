@@ -77,17 +77,17 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     draw_ring_gauge(ctx, GRect(col_r, y0, rd, rd),
                     s_steps_pct, 3, COLOR_SECONDARY, COLOR_PRIMARY);
 
-    int val_y = y0 + rd + 1;
+    // Values centered inside rings, labels below (SC style)
     graphics_draw_text(ctx, s_hr_buf, fonts_get(FONT_SIZE_HEADER),
-                       GRect(cx, val_y, cw / 2, 16),
+                       GRect(col_l, y0 + (rd - 14) / 2, rd, 14),
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentCenter, NULL);
     graphics_draw_text(ctx, s_steps_buf, fonts_get(FONT_SIZE_HEADER),
-                       GRect(cx + cw / 2, val_y, cw / 2, 16),
+                       GRect(col_r, y0 + (rd - 14) / 2, rd, 14),
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentCenter, NULL);
 
-    int lbl_y = val_y + 15;
+    int lbl_y = y0 + rd + 1;
     graphics_draw_text(ctx, "BPM", fonts_get(FONT_SIZE_HEADER),
                        GRect(cx, lbl_y, cw / 2, 14),
                        GTextOverflowModeTrailingEllipsis,
