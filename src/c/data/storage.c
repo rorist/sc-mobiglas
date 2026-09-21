@@ -23,7 +23,7 @@ void storage_save_config(uint32_t config) {
 // ---------------------------------------------------------------------------
 
 uint32_t storage_load_logo(void) {
-  if (!persist_exists(PERSIST_KEY_LOGO)) return 6;  // Star Citizen default
+  if (!persist_exists(PERSIST_KEY_LOGO)) return 7;  // Star Citizen default
   return (uint32_t)persist_read_int(PERSIST_KEY_LOGO);
 }
 

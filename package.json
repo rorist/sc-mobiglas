@@ -88,13 +88,28 @@
         },
         {
           "type": "bitmap",
-          "name": "IMAGE_LOGO_MISC",
-          "file": "images/logo_misc.png"
+          "name": "IMAGE_LOGO_DRAKE",
+          "file": "images/logo_drake.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_ORIGIN",
+          "file": "images/logo_origin.png"
         },
         {
           "type": "bitmap",
           "name": "IMAGE_LOGO_STARCITIZEN",
           "file": "images/logo_starcitizen.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_FRONTIER",
+          "file": "images/logo_frontier.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_HEADHUNTERS",
+          "file": "images/logo_headhunters.png"
         }
       ]
     }

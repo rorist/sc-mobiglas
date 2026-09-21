@@ -19,8 +19,11 @@ static void prv_load_logo(void) {
     case 2:  res = RESOURCE_ID_IMAGE_LOGO_ANVIL;       break;
     case 3:  res = RESOURCE_ID_IMAGE_LOGO_CRUSADER;    break;
     case 4:  res = RESOURCE_ID_IMAGE_LOGO_RSI;         break;
-    case 5:  res = RESOURCE_ID_IMAGE_LOGO_MISC;        break;
-    case 6:  res = RESOURCE_ID_IMAGE_LOGO_STARCITIZEN; break;
+    case 5:  res = RESOURCE_ID_IMAGE_LOGO_DRAKE;       break;
+    case 6:  res = RESOURCE_ID_IMAGE_LOGO_ORIGIN;      break;
+    case 7:  res = RESOURCE_ID_IMAGE_LOGO_STARCITIZEN; break;
+    case 8:  res = RESOURCE_ID_IMAGE_LOGO_FRONTIER;    break;
+    case 9:  res = RESOURCE_ID_IMAGE_LOGO_HEADHUNTERS; break;
     default: return;
   }
   s_logo_bmp = gbitmap_create_with_resource(res);
@@ -41,10 +44,13 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   const int l56 = FONT_LEADING_56;
   const int l18 = FONT_LEADING_18;
 
-  // Time zone: full content width, or reduced when a logo is displayed
+  // Fixed 64px logo zone at the right edge — time AND date keep the
+  // same position whatever logo is active
   GRect logo_bounds = s_logo_bmp ? gbitmap_get_bounds(s_logo_bmp) : GRectZero;
+  const int LOGO_ZONE_W = 64;
+  const int LOGO_GAP = 6;
   int time_w = content.size.w;
-  if (s_logo_bmp) time_w -= logo_bounds.size.w + 6;
+  if (s_logo_bmp) time_w -= LOGO_ZONE_W + LOGO_GAP;
   GRect time_rect = GRect(content.origin.x, y_offset - l56,
                           time_w, 52 + l56);
 
@@ -53,19 +59,24 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 
-  // Date: DOW DD MON — full content width, centered below time
+  // Date: DOW DD MON — same width as time zone (aligned with it)
   GRect date_rect = GRect(content.origin.x,
                            y_offset + 52 + 3 - l18,
-                           content.size.w, 18 + l18);
+                           time_w, 18 + l18);
   graphics_draw_text(ctx, s_date_buf, fonts_get(FONT_SIZE_VALUE), date_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 
-  // Constructor logo — right side, vertically centered on the time line
+  // Constructor logo — right side, full-width 64px, height varies per logo.
+  // Vertically + horizontally centered in the fixed right zone.
   if (s_logo_bmp) {
+    int logo_y = content.origin.y
+               + (content.size.h - logo_bounds.size.h) / 2;
+    if (logo_y < content.origin.y) logo_y = content.origin.y;
     GRect logo_rect = GRect(
-        content.origin.x + content.size.w - logo_bounds.size.w,
-        y_offset + (52 - logo_bounds.size.h) / 2,
+        content.origin.x + content.size.w - LOGO_ZONE_W
+            + (LOGO_ZONE_W - logo_bounds.size.w) / 2,
+        logo_y,
         logo_bounds.size.w, logo_bounds.size.h);
     graphics_context_set_compositing_mode(ctx, GCompOpSet);
     graphics_draw_bitmap_in_rect(ctx, s_logo_bmp, logo_rect);

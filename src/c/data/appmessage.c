@@ -65,7 +65,7 @@ static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
     } else {
       logo_val = (int)logo->value->int32;
     }
-    if (logo_val < 0 || logo_val > 6) logo_val = 0;
+    if (logo_val < 0 || logo_val > 9) logo_val = 0;
     watchface_set_logo((uint8_t)logo_val);
     storage_save_logo((uint8_t)logo_val);
   }

@@ -22,15 +22,18 @@ module.exports = [
         "type": "select",
         "messageKey": "KEY_LOGO",
         "label": "Constructor logo",
-        "defaultValue": "6",
+        "defaultValue": "7",
         "options": [
           { "value": "0", "label": "None" },
           { "value": "1", "label": "Aegis Dynamics" },
           { "value": "2", "label": "Anvil Aerospace" },
           { "value": "3", "label": "Crusader Industries" },
           { "value": "4", "label": "RSI" },
-          { "value": "5", "label": "MISC" },
-          { "value": "6", "label": "Star Citizen" }
+          { "value": "5", "label": "Drake Interplanetary" },
+          { "value": "6", "label": "Origin Jumpworks" },
+          { "value": "7", "label": "Star Citizen" },
+          { "value": "8", "label": "Frontier Fighters" },
+          { "value": "9", "label": "Headhunters" }
         ]
       }
     ]
