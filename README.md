@@ -1,36 +1,31 @@
-# sc-mobiglass
+# SC mobiGlas — Star Citizen Watchface for Pebble
 
-A Pebble watchapp/watchface written in C using the Pebble SDK.
+A fan-made watchface for Pebble PT2 (Emery) inspired by Star Citizen's mobiGlas holographic interface.
 
-## Building & running
+## Features
 
-```sh
-pebble build                          # build for all targetPlatforms
-pebble install --emulator emery       # install on the emery emulator
-pebble install --phone <ip>           # install to a paired phone
-```
+- **Time Display** — 24h/12h format toggle
+- **Weather** — Real-time temperature, condition, wind, humidity, UV index, sunrise/sunset (via Open-Meteo API)
+- **Health** — Heart rate and step count (Pebble Health)
+- **Battery** — Battery percentage and charging status
+- **Manufacturer Logos** — 9 constructors: Aegis, Anvil, Crusader, RSI, Drake, Origin, Star Citizen, Frontier Fighters, Headhunters
+- **Customizable Colors** — Time, values, labels, headers, and warning colors
+- **Configurable Layout** — Toggle panels (Medical, Environment, Systems) and time format
 
-## Target platforms
+## Installation
 
-`targetPlatforms` in `package.json` controls which watches you build for. The
-modern Pebble hardware is **emery** (Pebble Time 2), **gabbro** (Pebble Round
-2), and **flint** (Pebble 2 Duo); the original Pebble platforms (aplite,
-basalt, chalk, diorite) are included by default for backwards compatibility.
+Install from the Rebble app store or via sideload.
 
-## Project layout
+## Legal
 
-```
-src/c/           C source for the watchapp
-src/pkjs/        PebbleKit JS (phone-side) source, if any
-worker_src/c/    Background worker source, if any
-resources/       Images, fonts, and other bundled resources
-package.json     Project metadata (UUID, platforms, resources, message keys)
-wscript          Build rules — usually no need to edit
-```
+This is an unofficial fan project created under the [Star Citizen Fan Kit and Fandom FAQ](https://support.robertsspaceindustries.com/hc/en-us/articles/360006895793-Star-Citizen-Fankit-and-Fandom-FAQ). Not affiliated with Cloud Imperium Games or Roberts Space Industries.
 
-By default this project is configured as a watchapp. To make it a watchface,
-set `pebble.watchapp.watchface` to `true` in `package.json`.
+Uses assets from the [Star Citizen Fankit](https://robertsspaceindustries.com/fankit).
 
-## Documentation
+## License
 
-Full SDK docs, tutorials, and API reference: <https://developer.repebble.com>
+MIT
+
+## Author
+
+Rorist
