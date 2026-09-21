@@ -80,9 +80,9 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     if (y0 < cy) y0 = cy;
 
     draw_ring_gauge(ctx, GRect(col_l, y0, rd, rd),
-                    s_hr_pct, 3, COLOR_SECONDARY, hr_col);
+                    s_hr_pct, 3, COLOR_GAUGE_BG, hr_col);
     draw_ring_gauge(ctx, GRect(col_r, y0, rd, rd),
-                    s_steps_pct, 3, COLOR_SECONDARY, watchface_get_color_label());
+                    s_steps_pct, 3, COLOR_GAUGE_BG, watchface_get_color_label());
 
     // Values centered inside rings (leading-compensated), labels below
     graphics_context_set_text_color(ctx, hr_val_col);
@@ -157,10 +157,3 @@ void medical_panel_destroy(void) {
   }
 }
 
-void medical_panel_update_bounds(GRect bounds) {
-  if (s_layer) {
-    layer_set_frame(s_layer, bounds);
-    prv_refresh_health();
-    layer_mark_dirty(s_layer);
-  }
-}

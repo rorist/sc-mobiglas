@@ -140,9 +140,3 @@ void time_panel_refresh(void) {
   if (s_layer) layer_mark_dirty(s_layer);
 }
 
-void time_panel_update_bounds(GRect bounds) {
-  if (s_layer) {
-    layer_set_frame(s_layer, bounds);
-    layer_mark_dirty(s_layer);
-  }
-}

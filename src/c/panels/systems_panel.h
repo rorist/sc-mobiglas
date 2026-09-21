@@ -4,4 +4,3 @@
 
 Layer *systems_panel_create(GRect bounds);
 void systems_panel_destroy(void);
-void systems_panel_update_bounds(GRect bounds);

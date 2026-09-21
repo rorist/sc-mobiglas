@@ -168,13 +168,6 @@ void environ_panel_destroy(void) {
   }
 }
 
-void environ_panel_update_bounds(GRect bounds) {
-  if (s_layer) {
-    layer_set_frame(s_layer, bounds);
-    layer_mark_dirty(s_layer);
-  }
-}
-
 void environ_panel_set_weather(int8_t temp_c, const char *condition) {
   s_last_temp_c = temp_c;
   prv_format_temp();

@@ -180,20 +180,6 @@ void watchface_set_color_warn(GColor color) {
   prv_mark_all_dirty();
 }
 
-void watchface_reset_colors(void) {
-  s_color_time = COLOR_TIME_DEFAULT;
-  s_color_value = COLOR_VALUE_DEFAULT;
-  s_color_label = COLOR_LABEL_DEFAULT;
-  s_color_header = COLOR_HEADER_DEFAULT;
-  s_color_warn = COLOR_WARN_DEFAULT;
-  storage_save_color_time(s_color_time);
-  storage_save_color_value(s_color_value);
-  storage_save_color_label(s_color_label);
-  storage_save_color_header(s_color_header);
-  storage_save_color_warn(s_color_warn);
-  prv_mark_all_dirty();
-}
-
 void watchface_update_config(uint8_t config) {
   if (config == s_config) return;
   s_config = config;

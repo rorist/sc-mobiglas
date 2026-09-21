@@ -6,7 +6,6 @@
 // Color palette — mapped to nearest Pebble 6-bit GColor
 // ---------------------------------------------------------------------------
 #define COLOR_PRIMARY    GColorVividCerulean
-#define COLOR_SECONDARY  GColorCobaltBlue
 #define COLOR_BG         GColorBlack
 #define COLOR_PANEL_BG   GColorOxfordBlue
 #define COLOR_WARN       GColorOrange
@@ -36,7 +35,7 @@
 #define PANEL_HALF_W  ((PANEL_FULL_W - PANEL_GAP) / 2)  // 96
 
 // ---------------------------------------------------------------------------
-// Panel IDs (bit positions match config bitmask bits 2-5)
+// Panel IDs (bit positions match config bitmask bits 2-4)
 // ---------------------------------------------------------------------------
 #define PANEL_TIME     0  // always visible
 #define PANEL_MEDICAL  1  // config bit 2
@@ -47,20 +46,19 @@
 // ---------------------------------------------------------------------------
 // Panel minimum heights — used by layout engine
 // ---------------------------------------------------------------------------
-#define TIME_MIN_H     88  // 56px font + date + chrome
+#define TIME_MIN_H     88  // 60px font + date + chrome
 #define MEDICAL_MIN_H  70  // header + 2 data rows
 #define ENVIRON_MIN_H  70  // header + 3 data rows
 #define SYSTEMS_MIN_H  32  // compact header (BAT inline) + battery bar
 
 // ---------------------------------------------------------------------------
-// Config bitmask (from KEY_CONFIG AppMessage)
+// Config bitmask (rebuilt from individual Clay toggles via AppMessage)
 // ---------------------------------------------------------------------------
 #define CONFIG_12H       (1 << 0)
 #define CONFIG_FAHRENHEIT (1 << 1)
 #define CONFIG_MEDICAL   (1 << 2)
 #define CONFIG_ENVIRON   (1 << 3)
 #define CONFIG_SYSTEMS   (1 << 4)
-#define CONFIG_SECONDS   (1 << 5)
 
 // Default config: all panels ON, 24h, Celsius
 #define CONFIG_DEFAULT   (CONFIG_MEDICAL | CONFIG_ENVIRON | CONFIG_SYSTEMS)
@@ -97,8 +95,6 @@ void watchface_set_color_label(GColor color);
 void watchface_set_color_header(GColor color);
 void watchface_set_color_warn(GColor color);
 
-// Restore all five configurable text colors to their *_DEFAULT values
-void watchface_reset_colors(void);
 
 // ---------------------------------------------------------------------------
 // Watchface lifecycle
