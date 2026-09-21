@@ -15,7 +15,7 @@ function wmo_label(code) {
   if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return 'RAIN';
   if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'SNOW';
   if (code >= 95 && code <= 99) return 'STORM';
-  return 'UNKNOWN';
+  return 'N/A';
 }
 
 function send_weather(payload) {

@@ -153,7 +153,7 @@ void draw_dual_ring(GContext *ctx, GRect box,
 }
 
 // ---------------------------------------------------------------------------
-// Weather icons — 10x10px holo-style, color by severity
+// Weather icons — 8x8px holo-style, color by severity
 // CLEAR/CLOUDY/FOG/UNKNOWN cyan, RAIN/SNOW orange (WARN), STORM red (ALERT)
 // ---------------------------------------------------------------------------
 void draw_weather_icon(GContext *ctx, GPoint origin, int cond_idx) {
@@ -168,44 +168,44 @@ void draw_weather_icon(GContext *ctx, GPoint origin, int cond_idx) {
 
   switch (cond_idx) {
     case 0:  // CLEAR — hollow circle
-      graphics_draw_circle(ctx, GPoint(x + 5, y + 5), 4);
+      graphics_draw_circle(ctx, GPoint(x + 4, y + 4), 3);
       break;
 
     case 1:  // CLOUDY — top dome arc + baseline
-      graphics_draw_arc(ctx, GRect(x + 1, y + 2, 8, 8),
+      graphics_draw_arc(ctx, GRect(x, y + 1, 8, 8),
                         GOvalScaleModeFitCircle,
                         DEG_TO_TRIGANGLE(0), DEG_TO_TRIGANGLE(180));
-      graphics_draw_line(ctx, GPoint(x + 1, y + 6), GPoint(x + 9, y + 6));
+      graphics_draw_line(ctx, GPoint(x, y + 5), GPoint(x + 8, y + 5));
       break;
 
     case 2:  // FOG — three staggered horizontal lines
-      graphics_draw_line(ctx, GPoint(x + 1, y + 2), GPoint(x + 9, y + 2));
-      graphics_draw_line(ctx, GPoint(x, y + 5), GPoint(x + 8, y + 5));
-      graphics_draw_line(ctx, GPoint(x + 2, y + 8), GPoint(x + 9, y + 8));
+      graphics_draw_line(ctx, GPoint(x, y + 1), GPoint(x + 7, y + 1));
+      graphics_draw_line(ctx, GPoint(x, y + 4), GPoint(x + 7, y + 4));
+      graphics_draw_line(ctx, GPoint(x + 1, y + 7), GPoint(x + 7, y + 7));
       break;
 
     case 3:  // RAIN — small cloud + 2 slanted drops
-      graphics_draw_arc(ctx, GRect(x + 2, y, 6, 6), GOvalScaleModeFitCircle,
+      graphics_draw_arc(ctx, GRect(x + 1, y, 6, 6), GOvalScaleModeFitCircle,
                         DEG_TO_TRIGANGLE(0), DEG_TO_TRIGANGLE(180));
-      graphics_draw_line(ctx, GPoint(x + 2, y + 3), GPoint(x + 8, y + 3));
-      graphics_draw_line(ctx, GPoint(x + 4, y + 6), GPoint(x + 3, y + 9));
-      graphics_draw_line(ctx, GPoint(x + 7, y + 6), GPoint(x + 6, y + 9));
+      graphics_draw_line(ctx, GPoint(x + 1, y + 3), GPoint(x + 7, y + 3));
+      graphics_draw_line(ctx, GPoint(x + 3, y + 5), GPoint(x + 2, y + 7));
+      graphics_draw_line(ctx, GPoint(x + 5, y + 5), GPoint(x + 4, y + 7));
       break;
 
     case 4:  // SNOW — 6-armed star
-      graphics_draw_line(ctx, GPoint(x + 5, y + 1), GPoint(x + 5, y + 9));
-      graphics_draw_line(ctx, GPoint(x + 2, y + 2), GPoint(x + 8, y + 8));
-      graphics_draw_line(ctx, GPoint(x + 8, y + 2), GPoint(x + 2, y + 8));
+      graphics_draw_line(ctx, GPoint(x + 4, y), GPoint(x + 4, y + 8));
+      graphics_draw_line(ctx, GPoint(x + 1, y + 1), GPoint(x + 7, y + 7));
+      graphics_draw_line(ctx, GPoint(x + 7, y + 1), GPoint(x + 1, y + 7));
       break;
 
     case 5:  // STORM — lightning bolt polyline
-      graphics_draw_line(ctx, GPoint(x + 6, y), GPoint(x + 2, y + 5));
-      graphics_draw_line(ctx, GPoint(x + 2, y + 5), GPoint(x + 5, y + 5));
-      graphics_draw_line(ctx, GPoint(x + 5, y + 5), GPoint(x + 3, y + 9));
+      graphics_draw_line(ctx, GPoint(x + 5, y), GPoint(x + 2, y + 4));
+      graphics_draw_line(ctx, GPoint(x + 2, y + 4), GPoint(x + 4, y + 4));
+      graphics_draw_line(ctx, GPoint(x + 4, y + 4), GPoint(x + 2, y + 8));
       break;
 
     default:  // UNKNOWN — hollow square
-      graphics_draw_rect(ctx, GRect(x + 2, y + 2, 6, 6));
+      graphics_draw_rect(ctx, GRect(x + 1, y + 1, 6, 6));
       break;
   }
 }
@@ -236,4 +236,35 @@ void draw_sun_icon(GContext *ctx, GPoint origin, bool sunset) {
                       DEG_TO_TRIGANGLE(0), DEG_TO_TRIGANGLE(180));
     graphics_draw_line(ctx, GPoint(x + 4, y + 2), GPoint(x + 4, y + 6));
   }
+}
+
+// ---------------------------------------------------------------------------
+// Drop icon — 8x8px hollow teardrop, point at top
+// ---------------------------------------------------------------------------
+void draw_drop_icon(GContext *ctx, GPoint origin) {
+  int x = origin.x;
+  int y = origin.y;
+  graphics_context_set_stroke_color(ctx, COLOR_PRIMARY);
+
+  // Pointed top converging to the bowl
+  graphics_draw_line(ctx, GPoint(x + 4, y + 1), GPoint(x + 2, y + 5));
+  graphics_draw_line(ctx, GPoint(x + 4, y + 1), GPoint(x + 6, y + 5));
+  // Bottom bowl — semicircle right→bottom→left
+  graphics_draw_arc(ctx, GRect(x + 2, y + 3, 4, 4), GOvalScaleModeFitCircle,
+                    DEG_TO_TRIGANGLE(90), DEG_TO_TRIGANGLE(270));
+}
+
+// ---------------------------------------------------------------------------
+// Wind icon — 8x8px NE arrow (matches compass dir text)
+// ---------------------------------------------------------------------------
+void draw_wind_icon(GContext *ctx, GPoint origin) {
+  int x = origin.x;
+  int y = origin.y;
+  graphics_context_set_stroke_color(ctx, COLOR_PRIMARY);
+
+  // Shaft diagonal bottom-left → top-right
+  graphics_draw_line(ctx, GPoint(x + 1, y + 6), GPoint(x + 6, y + 1));
+  // Arrowhead — horizontal-left and vertical-down from tip
+  graphics_draw_line(ctx, GPoint(x + 6, y + 1), GPoint(x + 3, y + 1));
+  graphics_draw_line(ctx, GPoint(x + 6, y + 1), GPoint(x + 6, y + 4));
 }

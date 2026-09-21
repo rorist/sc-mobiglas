@@ -42,3 +42,11 @@ void draw_weather_icon(GContext *ctx, GPoint origin, int cond_idx);
 // sunset=false: sun (circle + rays), sunset=true: half moon (right arc + chord)
 // Color: COLOR_PRIMARY
 void draw_sun_icon(GContext *ctx, GPoint origin, bool sunset);
+
+// Draw an 8x8px holo-style drop (humidity) icon at origin (top-left)
+// Color: COLOR_PRIMARY
+void draw_drop_icon(GContext *ctx, GPoint origin);
+
+// Draw an 8x8px holo-style NE arrow (wind) icon at origin (top-left)
+// Color: COLOR_PRIMARY
+void draw_wind_icon(GContext *ctx, GPoint origin);

@@ -102,23 +102,25 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
 
   // Line 1: icon + condition (left) + temperature (right)
   draw_weather_icon(ctx, GPoint(x, y0 + 2), prv_cond_index(s_cond_buf));
-  GRect cond_rect = GRect(x + 14, y0 - l14, w - 14 - 28, line_h + l14);
+  GRect cond_rect = GRect(x + 10, y0 - l14, w - 10 - 32, line_h + l14);
   graphics_draw_text(ctx, s_cond_buf, fonts_get(FONT_SIZE_HEADER), cond_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
-  GRect temp_rect = GRect(x + w - 28, y0 - l14, 28, line_h + l14);
+  GRect temp_rect = GRect(x + w - 32, y0 - l14, 32, line_h + l14);
   graphics_draw_text(ctx, s_temp_buf, fonts_get(FONT_SIZE_HEADER), temp_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentRight, NULL);
 
-  // Line 2: wind
-  GRect wind_rect = GRect(x, y0 + 15 - l14, w, line_h + l14);
+  // Line 2: wind icon + wind text
+  draw_wind_icon(ctx, GPoint(x, y0 + 15 + 3));
+  GRect wind_rect = GRect(x + 10, y0 + 15 - l14, w - 10, line_h + l14);
   graphics_draw_text(ctx, s_wind_buf, fonts_get(FONT_SIZE_HEADER), wind_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
 
-  // Line 3: humidity + UV
-  GRect humuv_rect = GRect(x, y0 + 30 - l14, w, line_h + l14);
+  // Line 3: drop icon + humidity/UV text
+  draw_drop_icon(ctx, GPoint(x, y0 + 30 + 3));
+  GRect humuv_rect = GRect(x + 10, y0 + 30 - l14, w - 10, line_h + l14);
   graphics_draw_text(ctx, s_humuv_buf, fonts_get(FONT_SIZE_HEADER), humuv_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
