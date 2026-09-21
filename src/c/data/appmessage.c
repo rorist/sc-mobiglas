@@ -6,10 +6,20 @@
 // AppMessage inbox — dispatch phone data to panels
 // ---------------------------------------------------------------------------
 
+// Apply a Clay toggle (Int32 0/1) to one bit of the config bitmask.
+// Returns config unchanged if the key is absent.
+static uint8_t prv_apply_toggle(DictionaryIterator *iter, uint32_t key,
+                                uint8_t config, uint8_t bit) {
+  Tuple *t = dict_find(iter, key);
+  if (!t) return config;
+  return (t->value->int32) ? (uint8_t)(config | bit)
+                           : (uint8_t)(config & ~bit);
+}
+
 static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
   // Weather: temperature + condition (both sent together by weather.js)
-  Tuple *temp = dict_find(iter, KEY_TEMP);
-  Tuple *cond = dict_find(iter, KEY_WEATHER);
+  Tuple *temp = dict_find(iter, MESSAGE_KEY_KEY_TEMP);
+  Tuple *cond = dict_find(iter, MESSAGE_KEY_KEY_WEATHER);
   if (temp && cond) {
     environ_panel_set_weather((int8_t)temp->value->int8, cond->value->cstring);
   } else if (temp || cond) {
@@ -18,20 +28,26 @@ static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
   }
 
   // Calendar: next event title + Unix epoch
-  Tuple *evt_title = dict_find(iter, KEY_EVENT_TITLE);
-  Tuple *evt_time = dict_find(iter, KEY_EVENT_TIME);
+  Tuple *evt_title = dict_find(iter, MESSAGE_KEY_KEY_EVENT_TITLE);
+  Tuple *evt_time = dict_find(iter, MESSAGE_KEY_KEY_EVENT_TIME);
   if (evt_title || evt_time) {
     const char *title = evt_title ? evt_title->value->cstring : NULL;
     uint32_t epoch = evt_time ? (uint32_t)evt_time->value->int32 : 0;
     environ_panel_set_event(title, epoch);
   }
 
-  // Config bitmask — rebuild layout if changed
-  Tuple *cfg = dict_find(iter, KEY_CONFIG);
-  if (cfg) {
-    uint8_t config = cfg->value->uint8;
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Config received: 0x%02x", config);
-    watchface_update_config(config);
+  // Config — Clay sends each toggle as Int32 (1/0); rebuild the bitmask
+  uint8_t config = watchface_get_config();
+  uint8_t new_config = config;
+  new_config = prv_apply_toggle(iter, MESSAGE_KEY_KEY_12H, new_config, CONFIG_12H);
+  new_config = prv_apply_toggle(iter, MESSAGE_KEY_KEY_FAHRENHEIT, new_config, CONFIG_FAHRENHEIT);
+  new_config = prv_apply_toggle(iter, MESSAGE_KEY_KEY_SHOW_MEDICAL, new_config, CONFIG_MEDICAL);
+  new_config = prv_apply_toggle(iter, MESSAGE_KEY_KEY_SHOW_ENVIRON, new_config, CONFIG_ENVIRON);
+  new_config = prv_apply_toggle(iter, MESSAGE_KEY_KEY_SHOW_SYSTEMS, new_config, CONFIG_SYSTEMS);
+  new_config = prv_apply_toggle(iter, MESSAGE_KEY_KEY_SECONDS, new_config, CONFIG_SECONDS);
+  if (new_config != config) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Config: 0x%02x -> 0x%02x", config, new_config);
+    watchface_update_config(new_config);
     // TODO: persist via storage (see todo-list, data layer)
   }
 }

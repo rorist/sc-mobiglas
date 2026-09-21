@@ -2,16 +2,25 @@
   "name": "sc-mobiglas",
   "author": "MakeAwesomeHappen",
   "version": "1.0.0",
-  "keywords": ["pebble-app"],
+  "keywords": [
+    "pebble-app"
+  ],
   "private": true,
-  "dependencies": {},
+  "dependencies": {
+    "@rebble/clay": "^1.1.0"
+  },
   "pebble": {
     "displayName": "SC mobiGlas",
     "uuid": "f9f0f305-ec71-473d-8e07-799225d4d099",
     "sdkVersion": "3",
     "enableMultiJS": true,
-    "targetPlatforms": ["emery"],
-    "capabilities": ["health"],
+    "targetPlatforms": [
+      "emery"
+    ],
+    "capabilities": [
+      "health",
+      "configurable"
+    ],
     "watchapp": {
       "watchface": true
     },
@@ -20,7 +29,12 @@
       "KEY_WEATHER": 1,
       "KEY_EVENT_TITLE": 2,
       "KEY_EVENT_TIME": 3,
-      "KEY_CONFIG": 4
+      "KEY_12H": 5,
+      "KEY_FAHRENHEIT": 6,
+      "KEY_SHOW_MEDICAL": 7,
+      "KEY_SHOW_ENVIRON": 8,
+      "KEY_SHOW_SYSTEMS": 9,
+      "KEY_SECONDS": 10
     },
     "resources": {
       "media": [

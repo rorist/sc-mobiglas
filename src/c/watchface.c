@@ -107,6 +107,10 @@ void watchface_tick(struct tm *tick_time, TimeUnits units_changed) {
   }
 }
 
+uint8_t watchface_get_config(void) {
+  return s_config;
+}
+
 void watchface_update_config(uint8_t config) {
   if (config == s_config) return;
   s_config = config;
