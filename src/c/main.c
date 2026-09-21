@@ -1,5 +1,6 @@
 #include <pebble.h>
 #include "watchface.h"
+#include "data/appmessage.h"
 
 static Window *s_window;
 
@@ -25,6 +26,9 @@ static void prv_init(void) {
   window_stack_push(s_window, true);
 
   tick_timer_service_subscribe(MINUTE_UNIT, prv_tick_handler);
+
+  // After window load: panels exist, AppMessage data can be dispatched
+  appmessage_init();
 }
 
 static void prv_deinit(void) {

@@ -95,7 +95,7 @@ void environ_panel_set_weather(int8_t temp_c, const char *condition) {
 
 void environ_panel_set_event(const char *title, uint32_t event_time) {
   if (title && title[0]) {
-    snprintf(s_event_buf, sizeof(s_event_buf), "%.14s", title);
+    snprintf(s_event_buf, sizeof(s_event_buf), "%.18s", title);
   } else {
     snprintf(s_event_buf, sizeof(s_event_buf), "EVT: ---");
   }
