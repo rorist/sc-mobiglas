@@ -168,3 +168,18 @@ void appmessage_init(void) {
   }
 }
 
+// Send a weather refresh request to the phone (watch-driven, tick % 30 min).
+void appmessage_request_weather(void) {
+  DictionaryIterator *iter;
+  AppMessageResult res = app_message_outbox_begin(&iter);
+  if (res != APP_MSG_OK) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "outbox begin failed: %d", (int)res);
+    return;
+  }
+  dict_write_uint8(iter, MESSAGE_KEY_KEY_REQUEST_WEATHER, 1);
+  res = app_message_outbox_send();
+  if (res != APP_MSG_OK) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "outbox send failed: %d", (int)res);
+  }
+}
+

@@ -5,6 +5,7 @@
 #include "panels/systems_panel.h"
 #include "ui/fonts.h"
 #include "data/storage.h"
+#include "data/appmessage.h"
 
 static Layer *s_root_layer;
 static Layer *s_panel_layers[PANEL_COUNT];
@@ -122,6 +123,11 @@ void watchface_tick(struct tm *tick_time, TimeUnits units_changed) {
   // Systems panel auto-refreshes battery on dirty
   if (s_panel_layers[PANEL_SYSTEMS]) {
     layer_mark_dirty(s_panel_layers[PANEL_SYSTEMS]);
+  }
+  // Watch-driven weather refresh every 30 min (tick is reliable,
+  // phone-side setInterval is not — PKJS can be killed by Android)
+  if (tick_time->tm_min % 30 == 0) {
+    appmessage_request_weather();
   }
 }
 

@@ -11,3 +11,7 @@
 // messages can be dispatched immediately.
 void appmessage_init(void);
 
+// Ask the phone to refresh weather data (sent on watch tick every 30 min).
+// The PKJS side listens for this key on its 'appmessage' event.
+void appmessage_request_weather(void);
+

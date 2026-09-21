@@ -5,8 +5,6 @@
 //  12 KEY_HUMIDITY (Int8 %),           13 KEY_UV (Int8 index),
 //  14 KEY_SUNRISE (CString "HH:MM"),   15 KEY_SUNSET (CString "HH:MM")
 
-var FETCH_INTERVAL_MS = 30 * 60 * 1000; // 30 min
-
 // WMO weathercode → display label
 function wmo_label(code) {
   if (code === 0) return 'CLEAR';
@@ -112,6 +110,5 @@ function fetch() {
 }
 
 module.exports = {
-  fetch: fetch,
-  FETCH_INTERVAL_MS: FETCH_INTERVAL_MS
+  fetch: fetch
 };

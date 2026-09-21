@@ -35,6 +35,7 @@
     "messageKeys": {
       "KEY_TEMP": 0,
       "KEY_WEATHER": 1,
+      "KEY_REQUEST_WEATHER": 2,
       "KEY_12H": 5,
       "KEY_FAHRENHEIT": 6,
       "KEY_SHOW_MEDICAL": 7,
