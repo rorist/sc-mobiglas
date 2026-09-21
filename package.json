@@ -38,7 +38,13 @@
       "KEY_UV": 13,
       "KEY_SUNRISE": 14,
       "KEY_SUNSET": 15,
-      "KEY_LOGO": 16
+      "KEY_LOGO": 16,
+      "KEY_COLOR_TIME": 17,
+      "KEY_COLOR_VALUE": 18,
+      "KEY_COLOR_LABEL": 19,
+      "KEY_COLOR_HEADER": 20,
+      "KEY_COLOR_WARN": 21,
+      "KEY_RESET_COLORS": 22
     },
     "resources": {
       "media": [

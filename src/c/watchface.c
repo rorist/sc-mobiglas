@@ -12,6 +12,13 @@ static uint8_t s_config = CONFIG_DEFAULT;
 static uint8_t s_logo = 0;
 static GRect s_screen_bounds;
 
+// Configurable text colors
+static GColor s_color_time = COLOR_TIME_DEFAULT;
+static GColor s_color_value = COLOR_VALUE_DEFAULT;
+static GColor s_color_label = COLOR_LABEL_DEFAULT;
+static GColor s_color_header = COLOR_HEADER_DEFAULT;
+static GColor s_color_warn = COLOR_WARN_DEFAULT;
+
 // ---------------------------------------------------------------------------
 // Root layer — fills background
 // ---------------------------------------------------------------------------
@@ -73,9 +80,14 @@ void watchface_create(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   s_screen_bounds = layer_get_bounds(window_layer);
 
-  // Restore persisted settings (config bitmask + constructor logo)
+  // Restore persisted settings (config bitmask, logo, text colors)
   s_config = storage_load_config();
   s_logo = storage_load_logo();
+  s_color_time = storage_load_color_time();
+  s_color_value = storage_load_color_value();
+  s_color_label = storage_load_color_label();
+  s_color_header = storage_load_color_header();
+  s_color_warn = storage_load_color_warn();
 
   // Load fonts
   fonts_init();
@@ -125,6 +137,61 @@ void watchface_set_logo(uint8_t logo) {
   if (logo == s_logo) return;
   s_logo = logo;
   time_panel_refresh();
+}
+
+// ---------------------------------------------------------------------------
+// Configurable text colors
+// ---------------------------------------------------------------------------
+
+static void prv_mark_all_dirty(void) {
+  for (int i = 0; i < PANEL_COUNT; i++) {
+    if (s_panel_layers[i]) layer_mark_dirty(s_panel_layers[i]);
+  }
+}
+
+GColor watchface_get_color_time(void) { return s_color_time; }
+GColor watchface_get_color_value(void) { return s_color_value; }
+GColor watchface_get_color_label(void) { return s_color_label; }
+GColor watchface_get_color_header(void) { return s_color_header; }
+GColor watchface_get_color_warn(void) { return s_color_warn; }
+
+void watchface_set_color_time(GColor color) {
+  s_color_time = color;
+  prv_mark_all_dirty();
+}
+
+void watchface_set_color_value(GColor color) {
+  s_color_value = color;
+  prv_mark_all_dirty();
+}
+
+void watchface_set_color_label(GColor color) {
+  s_color_label = color;
+  prv_mark_all_dirty();
+}
+
+void watchface_set_color_header(GColor color) {
+  s_color_header = color;
+  prv_mark_all_dirty();
+}
+
+void watchface_set_color_warn(GColor color) {
+  s_color_warn = color;
+  prv_mark_all_dirty();
+}
+
+void watchface_reset_colors(void) {
+  s_color_time = COLOR_TIME_DEFAULT;
+  s_color_value = COLOR_VALUE_DEFAULT;
+  s_color_label = COLOR_LABEL_DEFAULT;
+  s_color_header = COLOR_HEADER_DEFAULT;
+  s_color_warn = COLOR_WARN_DEFAULT;
+  storage_save_color_time(s_color_time);
+  storage_save_color_value(s_color_value);
+  storage_save_color_label(s_color_label);
+  storage_save_color_header(s_color_header);
+  storage_save_color_warn(s_color_warn);
+  prv_mark_all_dirty();
 }
 
 void watchface_update_config(uint8_t config) {

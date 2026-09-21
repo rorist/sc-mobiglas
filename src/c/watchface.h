@@ -9,11 +9,17 @@
 #define COLOR_SECONDARY  GColorCobaltBlue
 #define COLOR_BG         GColorBlack
 #define COLOR_PANEL_BG   GColorOxfordBlue
-#define COLOR_TEXT       GColorVividCerulean
 #define COLOR_WARN       GColorOrange
-#define COLOR_ALERT      GColorRed
 #define COLOR_SAFE       GColorMalachite
+#define COLOR_ALERT      GColorRed
 #define COLOR_GAUGE_BG   GColorCobaltBlue
+
+// Configurable text colors (runtime, set via settings) — see getters below
+#define COLOR_TIME_DEFAULT   GColorCeleste
+#define COLOR_VALUE_DEFAULT  GColorPictonBlue
+#define COLOR_LABEL_DEFAULT  GColorVividCerulean
+#define COLOR_HEADER_DEFAULT GColorVividCerulean
+#define COLOR_WARN_DEFAULT   GColorOrange
 
 // ---------------------------------------------------------------------------
 // Layout constants — Emery (PT2): 200 x 228
@@ -75,9 +81,24 @@ LayoutInfo layout_compute(GRect screen_bounds, uint8_t config);
 // Current active config bitmask (source of truth kept in watchface.c)
 uint8_t watchface_get_config(void);
 
-// Constructor logo displayed right of the time (0 = none, 1-6 = logo id)
+// Constructor logo displayed right of the time (0 = none, 1-9 = logo id)
 uint8_t watchface_get_logo(void);
 void watchface_set_logo(uint8_t logo);
+
+// Configurable text colors (runtime)
+GColor watchface_get_color_time(void);
+GColor watchface_get_color_value(void);
+GColor watchface_get_color_label(void);
+GColor watchface_get_color_header(void);
+GColor watchface_get_color_warn(void);
+void watchface_set_color_time(GColor color);
+void watchface_set_color_value(GColor color);
+void watchface_set_color_label(GColor color);
+void watchface_set_color_header(GColor color);
+void watchface_set_color_warn(GColor color);
+
+// Restore all five configurable text colors to their *_DEFAULT values
+void watchface_reset_colors(void);
 
 // ---------------------------------------------------------------------------
 // Watchface lifecycle

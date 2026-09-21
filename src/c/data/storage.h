@@ -10,3 +10,15 @@ void storage_save_config(uint32_t config);
 
 uint32_t storage_load_logo(void);
 void storage_save_logo(uint32_t logo);
+
+// Configurable text colors (persisted as GColor.argb)
+GColor storage_load_color_time(void);
+GColor storage_load_color_value(void);
+GColor storage_load_color_label(void);
+GColor storage_load_color_header(void);
+GColor storage_load_color_warn(void);
+void storage_save_color_time(GColor color);
+void storage_save_color_value(GColor color);
+void storage_save_color_label(GColor color);
+void storage_save_color_header(GColor color);
+void storage_save_color_warn(GColor color);

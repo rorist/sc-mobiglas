@@ -43,6 +43,50 @@ module.exports = [
     "items": [
       {
         "type": "heading",
+        "defaultValue": "Colors"
+      },
+      {
+        "type": "color",
+        "messageKey": "KEY_COLOR_TIME",
+        "label": "Time color",
+        "defaultValue": "#aaffff"
+      },
+      {
+        "type": "color",
+        "messageKey": "KEY_COLOR_VALUE",
+        "label": "Value color",
+        "defaultValue": "#55aaff"
+      },
+      {
+        "type": "color",
+        "messageKey": "KEY_COLOR_LABEL",
+        "label": "Label color",
+        "defaultValue": "#00aaff"
+      },
+      {
+        "type": "color",
+        "messageKey": "KEY_COLOR_HEADER",
+        "label": "Header color",
+        "defaultValue": "#00aaff"
+      },
+      {
+        "type": "color",
+        "messageKey": "KEY_COLOR_WARN",
+        "label": "Warning color",
+        "defaultValue": "#ff8800"
+      },
+      {
+        "type": "button",
+        "defaultValue": 1,
+        "label": "Reset colors to defaults"
+      }
+    ]
+  },
+  {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
         "defaultValue": "Weather"
       },
       {

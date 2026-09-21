@@ -54,7 +54,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   GRect time_rect = GRect(content.origin.x, y_offset - l56,
                           time_w, 52 + l56);
 
-  graphics_context_set_text_color(ctx, COLOR_TEXT);
+  graphics_context_set_text_color(ctx, watchface_get_color_time());
   graphics_draw_text(ctx, s_time_buf, fonts_get(FONT_SIZE_TIME_BIG), time_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
@@ -63,6 +63,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   GRect date_rect = GRect(content.origin.x,
                            y_offset + 52 + 3 - l18,
                            time_w, 18 + l18);
+  graphics_context_set_text_color(ctx, watchface_get_color_value());
   graphics_draw_text(ctx, s_date_buf, fonts_get(FONT_SIZE_VALUE), date_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);

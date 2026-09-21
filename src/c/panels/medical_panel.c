@@ -1,5 +1,6 @@
 #include "medical_panel.h"
 #include "panel.h"
+#include "../watchface.h"
 
 static Layer *s_layer;
 static char s_hr_buf[12];
@@ -57,9 +58,14 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   int ch = content.size.h;
 
   // HR ring color: safe(green) 50..100 bpm, else warn(orange)
-  GColor hr_col = (s_hr_bpm >= 50 && s_hr_bpm <= 100) ? COLOR_SAFE : COLOR_WARN;
+  GColor hr_col = (s_hr_bpm >= 50 && s_hr_bpm <= 100)
+      ? COLOR_SAFE : watchface_get_color_warn();
 
-  graphics_context_set_text_color(ctx, COLOR_TEXT);
+  // Value color, overridden by warn when HR is abnormal
+  GColor hr_val_col = (s_hr_bpm >= 50 && s_hr_bpm <= 100)
+      ? watchface_get_color_value() : watchface_get_color_warn();
+
+  graphics_context_set_text_color(ctx, watchface_get_color_value());
 
   bool compact = (cw < 120);
   if (compact) {
@@ -79,6 +85,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
                     s_steps_pct, 3, COLOR_SECONDARY, COLOR_PRIMARY);
 
     // Values centered inside rings (leading-compensated), labels below
+    graphics_context_set_text_color(ctx, hr_val_col);
     graphics_draw_text(ctx, s_hr_buf, fonts_get(FONT_SIZE_HEADER),
                        GRect(col_l, y0 + (rd - 14) / 2 - FONT_LEADING_14,
                              rd, 14 + FONT_LEADING_14),
@@ -91,6 +98,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
                        GTextAlignmentCenter, NULL);
 
     int lbl_y = y0 + rd + 2;
+    graphics_context_set_text_color(ctx, watchface_get_color_label());
     graphics_draw_text(ctx, "BPM", fonts_get(FONT_SIZE_HEADER),
                        GRect(cx, lbl_y - FONT_LEADING_14, cw / 2,
                              14 + FONT_LEADING_14),
@@ -114,10 +122,12 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     // BPM centered in ring (leading-compensated), labels+values below
     GRect hr_c = GRect(cx, cy + ring_d / 2 - 12 - FONT_LEADING_18, cw,
                        20 + FONT_LEADING_18);
+    graphics_context_set_text_color(ctx, hr_val_col);
     graphics_draw_text(ctx, s_hr_buf, fonts_get(FONT_SIZE_VALUE), hr_c,
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentCenter, NULL);
     int ty = cy + ring_d + 2;
+    graphics_context_set_text_color(ctx, watchface_get_color_label());
     GRect hr_lbl = GRect(cx, ty - FONT_LEADING_14, cw / 2, 16 + FONT_LEADING_14);
     graphics_draw_text(ctx, "BPM", fonts_get(FONT_SIZE_HEADER), hr_lbl,
                        GTextOverflowModeTrailingEllipsis,

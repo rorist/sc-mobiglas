@@ -2,8 +2,13 @@
 #include "storage.h"
 #include "../watchface.h"
 
-#define PERSIST_KEY_CONFIG 1
-#define PERSIST_KEY_LOGO   2
+#define PERSIST_KEY_CONFIG     1
+#define PERSIST_KEY_LOGO       2
+#define PERSIST_KEY_COLOR_TIME   3
+#define PERSIST_KEY_COLOR_VALUE  4
+#define PERSIST_KEY_COLOR_LABEL  5
+#define PERSIST_KEY_COLOR_HEADER 6
+#define PERSIST_KEY_COLOR_WARN   7
 
 // ---------------------------------------------------------------------------
 // Config bitmask
@@ -29,4 +34,53 @@ uint32_t storage_load_logo(void) {
 
 void storage_save_logo(uint32_t logo) {
   persist_write_int(PERSIST_KEY_LOGO, (int32_t)logo);
+}
+
+// ---------------------------------------------------------------------------
+// Configurable text colors (persisted as GColor.argb uint8)
+// ---------------------------------------------------------------------------
+
+static GColor prv_load_color(int key, GColor def) {
+  if (!persist_exists(key)) return def;
+  return (GColor){ .argb = (uint8_t)persist_read_int(key) };
+}
+
+GColor storage_load_color_time(void) {
+  return prv_load_color(PERSIST_KEY_COLOR_TIME, COLOR_TIME_DEFAULT);
+}
+
+GColor storage_load_color_value(void) {
+  return prv_load_color(PERSIST_KEY_COLOR_VALUE, COLOR_VALUE_DEFAULT);
+}
+
+GColor storage_load_color_label(void) {
+  return prv_load_color(PERSIST_KEY_COLOR_LABEL, COLOR_LABEL_DEFAULT);
+}
+
+GColor storage_load_color_header(void) {
+  return prv_load_color(PERSIST_KEY_COLOR_HEADER, COLOR_HEADER_DEFAULT);
+}
+
+GColor storage_load_color_warn(void) {
+  return prv_load_color(PERSIST_KEY_COLOR_WARN, COLOR_WARN_DEFAULT);
+}
+
+void storage_save_color_time(GColor color) {
+  persist_write_int(PERSIST_KEY_COLOR_TIME, (int32_t)color.argb);
+}
+
+void storage_save_color_value(GColor color) {
+  persist_write_int(PERSIST_KEY_COLOR_VALUE, (int32_t)color.argb);
+}
+
+void storage_save_color_label(GColor color) {
+  persist_write_int(PERSIST_KEY_COLOR_LABEL, (int32_t)color.argb);
+}
+
+void storage_save_color_header(GColor color) {
+  persist_write_int(PERSIST_KEY_COLOR_HEADER, (int32_t)color.argb);
+}
+
+void storage_save_color_warn(GColor color) {
+  persist_write_int(PERSIST_KEY_COLOR_WARN, (int32_t)color.argb);
 }

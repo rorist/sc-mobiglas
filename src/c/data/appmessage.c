@@ -8,6 +8,32 @@
 // AppMessage inbox — dispatch phone data to panels
 // ---------------------------------------------------------------------------
 
+// Parse a Clay color CString "#rrggbb" to a GColor (nearest 64-color match)
+// NOTE: no sscanf — Pebble libc has no full stdio (link errors)
+static GColor prv_parse_color(const char *hex) {
+  if (!hex || hex[0] != '#') return GColorVividCerulean;
+  unsigned int v = 0;
+  for (int i = 1; i <= 6 && hex[i]; i++) {
+    char c = hex[i];
+    int d;
+    if (c >= '0' && c <= '9') d = c - '0';
+    else if (c >= 'a' && c <= 'f') d = c - 'a' + 10;
+    else if (c >= 'A' && c <= 'F') d = c - 'A' + 10;
+    else return GColorVividCerulean;
+    v = (v << 4) | (unsigned int)d;
+  }
+  return GColorFromRGBA((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF, 255);
+}
+
+// Clay "color" sends the value as an Int32 (0xRRGGBB packed by the picker);
+// tolerate a CString "#rrggbb" as well.
+static GColor prv_color_from_tuple(Tuple *t) {
+  if (!t) return GColorVividCerulean;
+  if (t->type == TUPLE_CSTRING) return prv_parse_color(t->value->cstring);
+  unsigned int v = (unsigned int)t->value->int32;
+  return GColorFromRGBA((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF, 255);
+}
+
 // Apply a Clay toggle (Int32 0/1) to one bit of the config bitmask.
 // Returns config unchanged if the key is absent.
 static uint8_t prv_apply_toggle(DictionaryIterator *iter, uint32_t key,
@@ -56,7 +82,7 @@ static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
         set ? set->value->cstring : NULL);
   }
 
-  // Constructor logo — Clay "select" sends a CString ("0".."6")
+  // Constructor logo — Clay "select" sends a CString ("0".."9")
   Tuple *logo = dict_find(iter, MESSAGE_KEY_KEY_LOGO);
   if (logo) {
     int logo_val = 0;
@@ -68,6 +94,35 @@ static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
     if (logo_val < 0 || logo_val > 9) logo_val = 0;
     watchface_set_logo((uint8_t)logo_val);
     storage_save_logo((uint8_t)logo_val);
+  }
+
+  // Configurable text colors — Clay "color" sends Int32 (0xRRGGBB packed);
+  // prv_color_from_tuple also tolerates a CString "#rrggbb"
+  Tuple *t;
+  if ((t = dict_find(iter, MESSAGE_KEY_KEY_COLOR_TIME))) {
+    GColor c = prv_color_from_tuple(t);
+    watchface_set_color_time(c);
+    storage_save_color_time(c);
+  }
+  if ((t = dict_find(iter, MESSAGE_KEY_KEY_COLOR_VALUE))) {
+    GColor c = prv_color_from_tuple(t);
+    watchface_set_color_value(c);
+    storage_save_color_value(c);
+  }
+  if ((t = dict_find(iter, MESSAGE_KEY_KEY_COLOR_LABEL))) {
+    GColor c = prv_color_from_tuple(t);
+    watchface_set_color_label(c);
+    storage_save_color_label(c);
+  }
+  if ((t = dict_find(iter, MESSAGE_KEY_KEY_COLOR_HEADER))) {
+    GColor c = prv_color_from_tuple(t);
+    watchface_set_color_header(c);
+    storage_save_color_header(c);
+  }
+  if ((t = dict_find(iter, MESSAGE_KEY_KEY_COLOR_WARN))) {
+    GColor c = prv_color_from_tuple(t);
+    watchface_set_color_warn(c);
+    storage_save_color_warn(c);
   }
 
   // Config — Clay sends each toggle as Int32 (1/0); rebuild the bitmask

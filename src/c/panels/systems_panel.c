@@ -1,5 +1,6 @@
 #include "systems_panel.h"
 #include "panel.h"
+#include "../watchface.h"
 
 static Layer *s_layer;
 static char s_bat_buf[12];  // "BAT: 99%"
@@ -16,7 +17,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   if (bat.is_charging) {
     bat_col = COLOR_SAFE;
   } else if (bat.charge_percent <= 20) {
-    bat_col = COLOR_WARN;
+    bat_col = watchface_get_color_warn();
   }
 
   // Chrome + header (label left, battery right)

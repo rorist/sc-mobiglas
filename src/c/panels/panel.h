@@ -16,10 +16,12 @@ static inline void panel_draw_chrome(GContext *ctx, GRect bounds, GColor color) 
 }
 
 // Draw chrome + header label (fill, border, accents, accent bar, title)
+// color = chrome/border color; header text uses configurable header color
 static inline void panel_draw_header_full(GContext *ctx, GRect bounds,
                                           const char *title, GColor color) {
   panel_draw_chrome(ctx, bounds, color);
-  draw_panel_header(ctx, bounds, title, fonts_get(FONT_SIZE_HEADER), color);
+  draw_panel_header(ctx, bounds, title, fonts_get(FONT_SIZE_HEADER),
+                    watchface_get_color_header());
 }
 
 // Draw chrome + header with optional right-aligned label
@@ -29,7 +31,8 @@ static inline void panel_draw_header_with_right(GContext *ctx, GRect bounds,
                                                 GColor color) {
   panel_draw_chrome(ctx, bounds, color);
   draw_panel_header_ex(ctx, bounds, title, right_label,
-                       fonts_get(FONT_SIZE_HEADER), color);
+                       fonts_get(FONT_SIZE_HEADER),
+                       watchface_get_color_header());
 }
 
 // Content area: the usable rect below the header (below underline at y+16)
