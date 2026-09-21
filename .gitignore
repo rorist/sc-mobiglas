@@ -2,3 +2,5 @@ build/
 .serena/
 *screenshot*.png
 .lock-waf_darwin_build
+node_modules/
+package-lock.json
