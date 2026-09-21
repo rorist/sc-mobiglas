@@ -74,13 +74,13 @@
         },
         {
           "type": "font",
-          "name": "FONT_RAJDHANI_48",
+          "name": "FONT_RAJDHANI_50",
           "file": "fonts/rajdhani-medium.ttf",
           "characterRegex": "[0-9: ]"
         },
         {
           "type": "font",
-          "name": "FONT_RAJDHANI_56",
+          "name": "FONT_RAJDHANI_60",
           "file": "fonts/rajdhani-medium.ttf",
           "characterRegex": "[0-9: ]"
         },

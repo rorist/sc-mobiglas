@@ -35,16 +35,18 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // Panel chrome + header label
   panel_draw_header_full(ctx, bounds, "NAVCOMP", COLOR_PRIMARY);
 
-  // Content block: 52px time + 3px gap + 18px date = 73px total
+  // Dynamic layout: time zone scales with the font (logo present = 50px in
+  // 52px zone, no logo = 60px in 56px zone), gap 3px, date 18px.
   GRect content = panel_content_rect(bounds);
-  int block_h = 73;
+  const int time_rect_h = s_logo_bmp ? 52 : 56;
+  int block_h = time_rect_h + 3 + 18;
   int y_offset = content.origin.y + (content.size.h - block_h) / 2;
   if (y_offset < content.origin.y) y_offset = content.origin.y;
 
-  // Dynamic time font: 56px without logo (186px zone fits any time),
-  // 48px with logo (116px zone — worst time "04:44" = 110px, fits).
-  // Rajdhani is variable-width; 56px + logo would truncate wide times.
-  const int l_time = s_logo_bmp ? FONT_LEADING_48 : FONT_LEADING_56;
+  // Dynamic time font: 60px without logo (186px zone fits any time),
+  // 50px with logo (116px zone — worst time "04:44" = 114.6px, fits).
+  // Rajdhani is variable-width; larger + logo would truncate wide times.
+  const int l_time = s_logo_bmp ? FONT_LEADING_50 : FONT_LEADING_60;
   const FontSize time_font = s_logo_bmp ? FONT_SIZE_TIME : FONT_SIZE_TIME_BIG;
   const int l18 = FONT_LEADING_18;
 
@@ -56,7 +58,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   int time_w = content.size.w;
   if (s_logo_bmp) time_w -= LOGO_ZONE_W + LOGO_GAP;
   GRect time_rect = GRect(content.origin.x, y_offset - l_time,
-                          time_w, 52 + l_time);
+                          time_w, time_rect_h + l_time);
 
   graphics_context_set_text_color(ctx, watchface_get_color_time());
   graphics_draw_text(ctx, s_time_buf, fonts_get(time_font), time_rect,
@@ -65,7 +67,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
 
   // Date: DOW DD MON — same width as time zone (aligned with it)
   GRect date_rect = GRect(content.origin.x,
-                           y_offset + 52 + 3 - l18,
+                           y_offset + time_rect_h + 3 - l18,
                            time_w, 18 + l18);
   graphics_context_set_text_color(ctx, watchface_get_color_value());
   graphics_draw_text(ctx, s_date_buf, fonts_get(FONT_SIZE_VALUE), date_rect,

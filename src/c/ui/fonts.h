@@ -4,10 +4,10 @@
 
 // Font size identifiers
 typedef enum {
-  FONT_SIZE_HEADER = 0,  // 14px — panel headers, date, small text
+  FONT_SIZE_HEADER = 0,  // 14px — panel headers, small text
   FONT_SIZE_VALUE,       // 18px — panel values (HR, temp, etc.)
-  FONT_SIZE_TIME,        // 48px — HH:MM large time display
-  FONT_SIZE_TIME_BIG,    // 56px — HH:MM extra-large (when space allows)
+  FONT_SIZE_TIME,        // 50px — HH:MM large time display (with logo)
+  FONT_SIZE_TIME_BIG,    // 60px — HH:MM extra-large (no logo)
   FONT_SIZE_COUNT
 } FontSize;
 
@@ -26,5 +26,5 @@ GFont fonts_get(FontSize size);
 // V1 estimates — adjust via emulator screenshots if glyphs sit low/high.
 #define FONT_LEADING_14  2
 #define FONT_LEADING_18  3
-#define FONT_LEADING_48  7
-#define FONT_LEADING_56  8
+#define FONT_LEADING_50  7
+#define FONT_LEADING_60  9

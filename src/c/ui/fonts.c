@@ -8,9 +8,9 @@ void fonts_init(void) {
   s_fonts[FONT_SIZE_VALUE] = fonts_load_custom_font(
       resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_18));
   s_fonts[FONT_SIZE_TIME] = fonts_load_custom_font(
-      resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_48));
+      resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_50));
   s_fonts[FONT_SIZE_TIME_BIG] = fonts_load_custom_font(
-      resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_56));
+      resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_60));
 }
 
 void fonts_deinit(void) {
