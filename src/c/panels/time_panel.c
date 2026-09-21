@@ -41,7 +41,11 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   int y_offset = content.origin.y + (content.size.h - block_h) / 2;
   if (y_offset < content.origin.y) y_offset = content.origin.y;
 
-  const int l56 = FONT_LEADING_56;
+  // Dynamic time font: 56px without logo (186px zone fits any time),
+  // 48px with logo (116px zone — worst time "04:44" = 110px, fits).
+  // Rajdhani is variable-width; 56px + logo would truncate wide times.
+  const int l_time = s_logo_bmp ? FONT_LEADING_48 : FONT_LEADING_56;
+  const FontSize time_font = s_logo_bmp ? FONT_SIZE_TIME : FONT_SIZE_TIME_BIG;
   const int l18 = FONT_LEADING_18;
 
   // Fixed 64px logo zone at the right edge — time AND date keep the
@@ -51,11 +55,11 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   const int LOGO_GAP = 6;
   int time_w = content.size.w;
   if (s_logo_bmp) time_w -= LOGO_ZONE_W + LOGO_GAP;
-  GRect time_rect = GRect(content.origin.x, y_offset - l56,
-                          time_w, 52 + l56);
+  GRect time_rect = GRect(content.origin.x, y_offset - l_time,
+                          time_w, 52 + l_time);
 
   graphics_context_set_text_color(ctx, watchface_get_color_time());
-  graphics_draw_text(ctx, s_time_buf, fonts_get(FONT_SIZE_TIME_BIG), time_rect,
+  graphics_draw_text(ctx, s_time_buf, fonts_get(time_font), time_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 
