@@ -59,7 +59,7 @@ static void prv_format_humuv(void) {
   if (s_uv < 0) {
     snprintf(s_uv_buf, sizeof(s_uv_buf), "---");
   } else {
-    snprintf(s_uv_buf, sizeof(s_uv_buf), "%d", (int)s_uv);
+    snprintf(s_uv_buf, sizeof(s_uv_buf), "UV %d", (int)s_uv);
   }
 }
 
