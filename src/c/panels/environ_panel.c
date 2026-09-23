@@ -8,7 +8,7 @@ static char s_temp_buf[12];     // "-12°C" or "--°C"
 static char s_cond_buf[12];     // "CLOUDY" or "---"
 static char s_wind_buf[16];     // "12 km/h WSW"
 static char s_hum_buf[8];       // "68%"
-static char s_uv_buf[4];        // "3"
+static char s_uv_buf[8];        // "UV 11"
 
 // Last known temperature in canonical Celsius; sentinel = never received
 #define TEMP_UNAVAILABLE ((int8_t)-128)
