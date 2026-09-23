@@ -7,7 +7,8 @@
 // ---------------------------------------------------------------------------
 #define COLOR_PRIMARY    GColorVividCerulean
 #define COLOR_BG         GColorBlack
-#define COLOR_PANEL_BG   GColorOxfordBlue
+// B&W (flint): black panels on black bg, structure comes from borders/accents
+#define COLOR_PANEL_BG   PBL_IF_BW_ELSE(GColorBlack, GColorOxfordBlue)
 #define COLOR_WARN       GColorOrange
 #define COLOR_SAFE       GColorMalachite
 #define COLOR_ALERT      GColorRed
@@ -21,18 +22,13 @@
 #define COLOR_WARN_DEFAULT   GColorOrange
 
 // ---------------------------------------------------------------------------
-// Layout constants — Emery (PT2): 200 x 228
+// Layout constants — platform-aware
+// emery 200x228 (color), flint 144x168 (B&W), gabbro 260x260 (round)
+// Panel widths are derived at runtime from the screen bounds (layout.c);
+// only min heights and margins are fixed here.
 // ---------------------------------------------------------------------------
-#define SCREEN_W      200
-#define SCREEN_H      228
-#define MARGIN        3
+#define MARGIN        PBL_IF_ROUND_ELSE(24, 3)
 #define PANEL_GAP     2
-
-// Full-width panel width
-#define PANEL_FULL_W  (SCREEN_W - 2 * MARGIN)   // 194
-
-// Half-width panel (for side-by-side MEDICAL/ENVIRON)
-#define PANEL_HALF_W  ((PANEL_FULL_W - PANEL_GAP) / 2)  // 96
 
 // ---------------------------------------------------------------------------
 // Panel IDs (bit positions match config bitmask bits 2-4)
@@ -45,11 +41,19 @@
 
 // ---------------------------------------------------------------------------
 // Panel minimum heights — used by layout engine
+// Flint's 168px height is tight: shrink rows so all panels fit (sum <= 152)
 // ---------------------------------------------------------------------------
+#if PBL_DISPLAY_WIDTH < 200  // flint
+#define TIME_MIN_H     70  // 48px font + date + chrome
+#define MEDICAL_MIN_H  58  // header + 2 data rows
+#define ENVIRON_MIN_H  58  // header + 3 data rows
+#define SYSTEMS_MIN_H  24   // compact header (BAT inline) + battery bar
+#else  // emery / gabbro
 #define TIME_MIN_H     88  // 60px font + date + chrome
 #define MEDICAL_MIN_H  70  // header + 2 data rows
 #define ENVIRON_MIN_H  70  // header + 3 data rows
 #define SYSTEMS_MIN_H  32  // compact header (BAT inline) + battery bar
+#endif
 
 // ---------------------------------------------------------------------------
 // Config bitmask (rebuilt from individual Clay toggles via AppMessage)
@@ -73,7 +77,7 @@ typedef struct {
 } LayoutInfo;
 
 // Compute layout for the given config bitmask
-// screen_bounds: the full window bounds (200x228 on emery)
+// screen_bounds: the full window bounds (any platform)
 LayoutInfo layout_compute(GRect screen_bounds, uint8_t config);
 
 // Current active config bitmask (source of truth kept in watchface.c)

@@ -38,7 +38,15 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // Dynamic layout: time zone scales with the font (logo present = 50px in
   // 52px zone, no logo = 60px in 56px zone), gap 3px, date 18px.
   GRect content = panel_content_rect(bounds);
+#if PBL_DISPLAY_WIDTH < 200
+  // Flint (144px wide): logo + time can't fit side by side — logo not
+  // rendered, time uses the 48px font at full content width
+  const bool show_logo = false;
+  const int time_rect_h = 44;  // 48px font zone
+#else
+  const bool show_logo = (s_logo_bmp != NULL);
   const int time_rect_h = s_logo_bmp ? 52 : 56;
+#endif
   int block_h = time_rect_h + 3 + 18;
   int y_offset = content.origin.y + (content.size.h - block_h) / 2;
   if (y_offset < content.origin.y) y_offset = content.origin.y;
@@ -46,17 +54,17 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // Dynamic time font: 60px without logo (186px zone fits any time),
   // 50px with logo (116px zone — worst time "04:44" = 114.6px, fits).
   // Rajdhani is variable-width; larger + logo would truncate wide times.
-  const int l_time = s_logo_bmp ? FONT_LEADING_50 : FONT_LEADING_60;
-  const FontSize time_font = s_logo_bmp ? FONT_SIZE_TIME : FONT_SIZE_TIME_BIG;
+  const int l_time = show_logo ? FONT_LEADING_50 : FONT_LEADING_60;
+  const FontSize time_font = show_logo ? FONT_SIZE_TIME : FONT_SIZE_TIME_BIG;
   const int l18 = FONT_LEADING_18;
 
   // Fixed 64px logo zone at the right edge — time AND date keep the
   // same position whatever logo is active
-  GRect logo_bounds = s_logo_bmp ? gbitmap_get_bounds(s_logo_bmp) : GRectZero;
+  GRect logo_bounds = show_logo ? gbitmap_get_bounds(s_logo_bmp) : GRectZero;
   const int LOGO_ZONE_W = 64;
   const int LOGO_GAP = 6;
   int time_w = content.size.w;
-  if (s_logo_bmp) time_w -= LOGO_ZONE_W + LOGO_GAP;
+  if (show_logo) time_w -= LOGO_ZONE_W + LOGO_GAP;
   GRect time_rect = GRect(content.origin.x, y_offset - l_time,
                           time_w, time_rect_h + l_time);
 
@@ -76,7 +84,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
 
   // Constructor logo — right side, full-width 64px, height varies per logo.
   // Vertically + horizontally centered in the fixed right zone.
-  if (s_logo_bmp) {
+  if (show_logo) {
     int logo_y = content.origin.y
                + (content.size.h - logo_bounds.size.h) / 2;
     if (logo_y < content.origin.y) logo_y = content.origin.y;

@@ -23,7 +23,9 @@
     "sdkVersion": "3",
     "enableMultiJS": true,
     "targetPlatforms": [
-      "emery"
+      "emery",
+      "flint",
+      "gabbro"
     ],
     "capabilities": [
       "health",
@@ -73,6 +75,18 @@
           "name": "FONT_RAJDHANI_18",
           "file": "fonts/rajdhani-medium.ttf",
           "characterRegex": "[0-9:A-Za-z /.%°-]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_RAJDHANI_40",
+          "file": "fonts/rajdhani-medium.ttf",
+          "characterRegex": "[0-9: ]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_RAJDHANI_48",
+          "file": "fonts/rajdhani-medium.ttf",
+          "characterRegex": "[0-9: ]"
         },
         {
           "type": "font",

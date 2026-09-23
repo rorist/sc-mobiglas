@@ -21,6 +21,10 @@ LayoutInfo layout_compute(GRect screen, uint8_t config) {
   LayoutInfo info;
   memset(&info, 0, sizeof(info));
 
+  // Panel widths derived from actual screen bounds (platform-aware)
+  const int full_w = screen.size.w - 2 * MARGIN;
+  const int half_w = (full_w - PANEL_GAP) / 2;
+
   // TIME is always visible
   info.visible[PANEL_TIME] = true;
   info.visible[PANEL_MEDICAL] = (config & CONFIG_MEDICAL) != 0;
@@ -85,7 +89,7 @@ LayoutInfo layout_compute(GRect screen, uint8_t config) {
   }
 
   // Row 0: TIME
-  info.rects[PANEL_TIME] = GRect(screen.origin.x + MARGIN, y, PANEL_FULL_W, h_time);
+  info.rects[PANEL_TIME] = GRect(screen.origin.x + MARGIN, y, full_w, h_time);
   y += h_time + PANEL_GAP;
 
   // Row 1: MEDICAL / ENVIRON
@@ -94,17 +98,17 @@ LayoutInfo layout_compute(GRect screen, uint8_t config) {
     if (both) {
       // Side by side
       info.rects[PANEL_MEDICAL] = GRect(screen.origin.x + MARGIN, y,
-                                         PANEL_HALF_W, h_mid);
-      info.rects[PANEL_ENVIRON] = GRect(screen.origin.x + MARGIN + PANEL_HALF_W + PANEL_GAP, y,
-                                         PANEL_HALF_W, h_mid);
+                                         half_w, h_mid);
+      info.rects[PANEL_ENVIRON] = GRect(screen.origin.x + MARGIN + half_w + PANEL_GAP, y,
+                                         half_w, h_mid);
     } else if (info.visible[PANEL_MEDICAL]) {
       // MEDICAL only — full width
       info.rects[PANEL_MEDICAL] = GRect(screen.origin.x + MARGIN, y,
-                                         PANEL_FULL_W, h_mid);
+                                         full_w, h_mid);
     } else {
       // ENVIRON only — full width
       info.rects[PANEL_ENVIRON] = GRect(screen.origin.x + MARGIN, y,
-                                         PANEL_FULL_W, h_mid);
+                                         full_w, h_mid);
     }
     y += h_mid + PANEL_GAP;
   }
@@ -112,7 +116,7 @@ LayoutInfo layout_compute(GRect screen, uint8_t config) {
   // Row 2: SYSTEMS
   if (has_bot) {
     info.rects[PANEL_SYSTEMS] = GRect(screen.origin.x + MARGIN, y,
-                                       PANEL_FULL_W, h_bot);
+                                       full_w, h_bot);
   }
 
   return info;

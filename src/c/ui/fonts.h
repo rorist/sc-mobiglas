@@ -26,5 +26,12 @@ GFont fonts_get(FontSize size);
 // V1 estimates — adjust via emulator screenshots if glyphs sit low/high.
 #define FONT_LEADING_14  2
 #define FONT_LEADING_18  3
+// Time fonts differ by platform: flint (144px wide) uses 40/48px,
+// emery/gabbro use 50/60px — leading values match each pair.
+#if PBL_DISPLAY_WIDTH < 200
+#define FONT_LEADING_50  6
+#define FONT_LEADING_60  7
+#else
 #define FONT_LEADING_50  7
 #define FONT_LEADING_60  9
+#endif

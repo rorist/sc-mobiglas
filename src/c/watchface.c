@@ -28,9 +28,11 @@ static void prv_root_update_proc(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, COLOR_BG);
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
-  // Bottom accent line
+  // Bottom accent line (3px above bottom edge, any platform)
   graphics_context_set_stroke_color(ctx, COLOR_PRIMARY);
-  graphics_draw_line(ctx, GPoint(0, 225), GPoint(SCREEN_W - 1, 225));
+  graphics_draw_line(ctx, GPoint(bounds.origin.x, bounds.origin.y + bounds.size.h - 3),
+                      GPoint(bounds.origin.x + bounds.size.w - 1,
+                             bounds.origin.y + bounds.size.h - 3));
 }
 
 // ---------------------------------------------------------------------------
@@ -159,11 +161,18 @@ static void prv_mark_all_dirty(void) {
   }
 }
 
-GColor watchface_get_color_time(void) { return s_color_time; }
-GColor watchface_get_color_value(void) { return s_color_value; }
-GColor watchface_get_color_label(void) { return s_color_label; }
-GColor watchface_get_color_header(void) { return s_color_header; }
-GColor watchface_get_color_warn(void) { return s_color_warn; }
+// B&W (flint): clamp user-configurable colors to white — dark shades
+// would be invisible on the black background. Single point covering
+// storage + AppMessage + Clay paths.
+static GColor prv_clamp_bw(GColor c) {
+  return PBL_IF_BW_ELSE(GColorWhite, c);
+}
+
+GColor watchface_get_color_time(void) { return prv_clamp_bw(s_color_time); }
+GColor watchface_get_color_value(void) { return prv_clamp_bw(s_color_value); }
+GColor watchface_get_color_label(void) { return prv_clamp_bw(s_color_label); }
+GColor watchface_get_color_header(void) { return prv_clamp_bw(s_color_header); }
+GColor watchface_get_color_warn(void) { return prv_clamp_bw(s_color_warn); }
 
 void watchface_set_color_time(GColor color) {
   s_color_time = color;

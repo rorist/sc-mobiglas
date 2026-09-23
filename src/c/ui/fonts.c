@@ -7,10 +7,18 @@ void fonts_init(void) {
       resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_14));
   s_fonts[FONT_SIZE_VALUE] = fonts_load_custom_font(
       resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_18));
+#if PBL_DISPLAY_WIDTH < 200
+  // Flint (144x168): smaller time fonts fit the narrow screen
+  s_fonts[FONT_SIZE_TIME] = fonts_load_custom_font(
+      resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_40));
+  s_fonts[FONT_SIZE_TIME_BIG] = fonts_load_custom_font(
+      resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_48));
+#else
   s_fonts[FONT_SIZE_TIME] = fonts_load_custom_font(
       resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_50));
   s_fonts[FONT_SIZE_TIME_BIG] = fonts_load_custom_font(
       resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_60));
+#endif
 }
 
 void fonts_deinit(void) {
