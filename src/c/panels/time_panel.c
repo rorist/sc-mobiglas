@@ -42,7 +42,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // Flint (144px wide): logo + time can't fit side by side — logo not
   // rendered, time uses the 48px font at full content width
   const bool show_logo = false;
-  const int time_rect_h = 44;  // 48px font zone
+  const int time_rect_h = 40;  // 48px glyphs are 32px tall; 40 keeps the date visible
 #else
   const bool show_logo = (s_logo_bmp != NULL);
   const int time_rect_h = s_logo_bmp ? 52 : 56;
