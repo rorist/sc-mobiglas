@@ -1,18 +1,23 @@
 #include "systems_panel.h"
 #include "panel.h"
 #include "../watchface.h"
+#include "../ui/draw_utils.h"
 
 static Layer *s_layer;
-static char s_bat_buf[12];  // "BAT: 99%"
+static char s_bat_buf[12];  // "BAT 100%"
+static char s_com_buf[8];   // "COM OK" / "COM --"
 
 static void prv_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
 
-  // Battery state + label (rendered right-aligned inside the header)
-  BatteryChargeState bat = battery_state_service_peek();
-  snprintf(s_bat_buf, sizeof(s_bat_buf), "BAT: %d%%", bat.charge_percent);
+  // Chrome + header (title only — metrics live on the content line)
+  panel_draw_header_full(ctx, bounds, "SYSTEMS", COLOR_PRIMARY);
 
-  // Semantic color: charging=green, low(<=20%)=warn, else value color
+  GRect content = panel_content_rect(bounds);
+
+  // Battery state
+  BatteryChargeState bat = battery_state_service_peek();
+  snprintf(s_bat_buf, sizeof(s_bat_buf), "BAT %d%%", bat.charge_percent);
   GColor bat_col = watchface_get_color_value();
   if (bat.is_charging) {
     bat_col = COLOR_SAFE;
@@ -20,16 +25,52 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     bat_col = watchface_get_color_warn();
   }
 
-  // Chrome + header (label left, battery right)
-  panel_draw_header_with_right(ctx, bounds, "SYSTEMS", s_bat_buf,
-                               COLOR_PRIMARY, bat_col);
+  // Bluetooth state
+  bool bt = bluetooth_connection_service_peek();
+  snprintf(s_com_buf, sizeof(s_com_buf), "%s", bt ? "COM OK" : "COM --");
+  GColor com_col = bt ? watchface_get_color_value()
+                      : watchface_get_color_warn();
 
-  // Battery bar centered in the content area below the header
-  GRect content = panel_content_rect(bounds);
+  // Single line: BAT text | battery bar | COM icon + text
+  const int line_h = 14;
+  const int l14 = FONT_LEADING_14;
+  GFont font = fonts_get(FONT_SIZE_HEADER);
+  int y = content.origin.y + (content.size.h - line_h) / 2;
+  if (y < content.origin.y) y = content.origin.y;
+
+  GRect measure = GRect(content.origin.x, y - l14, content.size.w, line_h + l14);
+  GSize bat_size = graphics_text_layout_get_content_size(
+      s_bat_buf, font, measure, GTextOverflowModeTrailingEllipsis,
+      GTextAlignmentLeft);
+  GSize com_size = graphics_text_layout_get_content_size(
+      s_com_buf, font, measure, GTextOverflowModeTrailingEllipsis,
+      GTextAlignmentLeft);
+  const int icon_gap = 2;
+  int com_w = 8 + icon_gap + com_size.w;
+
+  // BAT: left-aligned text
+  graphics_context_set_text_color(ctx, bat_col);
+  graphics_draw_text(ctx, s_bat_buf, font,
+                     GRect(content.origin.x, y - l14, bat_size.w, line_h + l14),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+
+  // COM: right-aligned group (icon + text)
+  int com_x = content.origin.x + content.size.w - com_w;
+  graphics_context_set_stroke_color(ctx, com_col);
+  draw_comm_icon(ctx, GPoint(com_x, y + 3));
+  graphics_context_set_text_color(ctx, com_col);
+  graphics_draw_text(ctx, s_com_buf, font,
+                     GRect(com_x + 8 + icon_gap, y - l14, com_size.w,
+                           line_h + l14),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+
+  // Battery bar fills the space between the two groups
+  const int gap = 6;
+  int bar_x = content.origin.x + bat_size.w + gap;
+  int bar_w = com_x - gap - bar_x;
+  if (bar_w < 20) bar_w = 20;
   const int bar_h = 8;
-  GRect bar_rect = GRect(content.origin.x,
-                         content.origin.y + (content.size.h - bar_h) / 2,
-                         content.size.w, bar_h);
+  GRect bar_rect = GRect(bar_x, y + (line_h - bar_h) / 2, bar_w, bar_h);
   draw_battery_bar(ctx, bar_rect, bat.charge_percent, bat_col);
 }
 

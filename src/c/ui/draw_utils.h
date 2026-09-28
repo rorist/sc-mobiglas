@@ -56,3 +56,7 @@ void draw_wind_icon(GContext *ctx, GPoint origin);
 // Draw an 8x8px holo-style UV icon at origin (top-left): 3 parallel beams
 // Color: configurable LABEL color
 void draw_uv_icon(GContext *ctx, GPoint origin);
+
+// Draw an 8x8px holo-style comm (antenna) icon at origin (top-left):
+// mast + 2 up-right signal arcs. Color: caller sets the stroke color.
+void draw_comm_icon(GContext *ctx, GPoint origin);

@@ -101,9 +101,12 @@ void draw_panel_header(GContext *ctx, GRect bounds, const char *title,
 }
 
 void draw_battery_bar(GContext *ctx, GRect bounds, int percent, GColor color) {
-  const int seg_count = 6;
   const int seg_gap = 2;
-  int total_w = bounds.size.w;
+  const int total_w = bounds.size.w;
+  // Segment count adapts to bar width (dual metric mode = short bar)
+  int seg_count = (total_w + seg_gap) / 14;   // ~1 segment per 14px
+  if (seg_count < 3) seg_count = 3;
+  if (seg_count > 6) seg_count = 6;
   int seg_w = (total_w - (seg_count - 1) * seg_gap) / seg_count;
   int filled = (percent * seg_count + 50) / 100;
 
@@ -283,4 +286,23 @@ void draw_uv_icon(GContext *ctx, GPoint origin) {
   graphics_draw_line(ctx, GPoint(x + 0, y + 2), GPoint(x + 2, y + 4));
   graphics_draw_line(ctx, GPoint(x + 3, y + 2), GPoint(x + 5, y + 4));
   graphics_draw_line(ctx, GPoint(x + 6, y + 2), GPoint(x + 7, y + 3));
+}
+
+// ---------------------------------------------------------------------------
+// Comm icon — 8x8px holo-style antenna: mast + 2 up-right signal arcs
+// Color: caller sets the stroke color (matches the COM text state)
+// ---------------------------------------------------------------------------
+void draw_comm_icon(GContext *ctx, GPoint origin) {
+  int x = origin.x;
+  int y = origin.y;
+
+  // Mast + base
+  graphics_draw_line(ctx, GPoint(x + 2, y + 5), GPoint(x + 2, y + 7));
+  graphics_draw_line(ctx, GPoint(x + 1, y + 7), GPoint(x + 3, y + 7));
+
+  // Signal arcs — quarter circles centered on the mast tip, top-right quadrant
+  graphics_draw_arc(ctx, GRect(x + 0, y + 3, 4, 4), GOvalScaleModeFitCircle,
+                    DEG_TO_TRIGANGLE(0), DEG_TO_TRIGANGLE(90));
+  graphics_draw_arc(ctx, GRect(x - 2, y + 1, 8, 8), GOvalScaleModeFitCircle,
+                    DEG_TO_TRIGANGLE(0), DEG_TO_TRIGANGLE(90));
 }
