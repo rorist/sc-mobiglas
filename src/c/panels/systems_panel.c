@@ -5,7 +5,7 @@
 
 static Layer *s_layer;
 static char s_bat_buf[12];  // "BAT 100%"
-static char s_com_buf[8];   // "COM OK" / "COM --"
+static char s_com_buf[8];   // "COM OK" / "COM ERR"
 
 static void prv_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
@@ -31,7 +31,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
 
   // Bluetooth state
   bool bt = bluetooth_connection_service_peek();
-  snprintf(s_com_buf, sizeof(s_com_buf), "%s", bt ? "COM OK" : "COM --");
+  snprintf(s_com_buf, sizeof(s_com_buf), "%s", bt ? "COM OK" : "COM ERR");
   GColor com_col = bt ? watchface_get_color_value()
                       : watchface_get_color_warn();
 
@@ -55,7 +55,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // COM: right-aligned group (icon + text)
   int com_x = content.origin.x + content.size.w - com_w;
   if (show_com) {
-    graphics_context_set_stroke_color(ctx, com_col);
+    graphics_context_set_stroke_color(ctx, watchface_get_color_label());
     draw_comm_icon(ctx, GPoint(com_x, y + 3));
     graphics_context_set_text_color(ctx, com_col);
     graphics_draw_text(ctx, s_com_buf, font,
