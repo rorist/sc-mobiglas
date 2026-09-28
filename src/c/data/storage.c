@@ -9,6 +9,7 @@
 #define PERSIST_KEY_COLOR_LABEL  5
 #define PERSIST_KEY_COLOR_HEADER 6
 #define PERSIST_KEY_COLOR_WARN   7
+#define PERSIST_KEY_SHOW_DATE    8
 
 // ---------------------------------------------------------------------------
 // Config bitmask
@@ -34,6 +35,19 @@ uint32_t storage_load_logo(void) {
 
 void storage_save_logo(uint32_t logo) {
   persist_write_int(PERSIST_KEY_LOGO, (int32_t)logo);
+}
+
+// ---------------------------------------------------------------------------
+// Show date toggle (1 = show, 0 = hide; default shown)
+// ---------------------------------------------------------------------------
+
+uint32_t storage_load_show_date(void) {
+  if (!persist_exists(PERSIST_KEY_SHOW_DATE)) return 1;
+  return (uint32_t)persist_read_int(PERSIST_KEY_SHOW_DATE);
+}
+
+void storage_save_show_date(uint32_t show) {
+  persist_write_int(PERSIST_KEY_SHOW_DATE, (int32_t)show);
 }
 
 // ---------------------------------------------------------------------------

@@ -35,59 +35,93 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // Panel chrome + header label
   panel_draw_header_full(ctx, bounds, "NAVCOMP", COLOR_PRIMARY);
 
-  // Dynamic layout: time zone scales with the font (logo present = 50px in
-  // 52px zone, no logo = 60px in 56px zone), gap 3px, date 18px.
   GRect content = panel_content_rect(bounds);
+  const bool date_on = watchface_get_show_date();
 #if PBL_DISPLAY_WIDTH < 200
-  // Flint (144px wide): logo + time can't fit side by side — logo not
+  // Flint (144px wide): logo + big time can't fit side by side — logo not
   // rendered, time uses the 48px font at full content width
+  const bool hero = false;
   const bool show_logo = false;
   const FontSize time_font = FONT_SIZE_TIME_BIG;
   const int time_rect_h = 40;  // 48px glyphs are 32px tall; 40 keeps the date visible
+  const int l_time = FONT_LEADING_60;
 #else
   const bool show_logo = (s_logo_bmp != NULL);
-  // Font grows with panel height when no logo: 72px needs a 89px block
-  const FontSize time_font = show_logo ? FONT_SIZE_TIME
-      : (content.size.h >= 90 ? FONT_SIZE_TIME_HUGE : FONT_SIZE_TIME_BIG);
-  const int time_rect_h = show_logo ? 52
-                        : (time_font == FONT_SIZE_TIME_HUGE) ? 68 : 56;
+  // Hero mode = TIME is the only panel (tall content): time goes full-width
+  // at 80px with the logo centered below it
+  const bool hero = content.size.h >= 150;
+  FontSize time_font;
+  int time_rect_h;
+  if (hero) {
+    time_font = FONT_SIZE_TIME_MASSIVE;
+    time_rect_h = 76;
+  } else if (show_logo) {
+    time_font = FONT_SIZE_TIME;
+    time_rect_h = 52;
+  } else if (date_on) {
+    // Date takes 21px extra: 72px needs a 89px block
+    time_font = (content.size.h >= 90) ? FONT_SIZE_TIME_HUGE : FONT_SIZE_TIME_BIG;
+    time_rect_h = (time_font == FONT_SIZE_TIME_HUGE) ? 68 : 56;
+  } else {
+    // Date hidden: vertical space freed -> bigger time font
+    time_font = (content.size.h >= 76) ? FONT_SIZE_TIME_MASSIVE
+              : (content.size.h >= 68) ? FONT_SIZE_TIME_HUGE : FONT_SIZE_TIME_BIG;
+    time_rect_h = (time_font == FONT_SIZE_TIME_MASSIVE) ? 76
+                : (time_font == FONT_SIZE_TIME_HUGE) ? 68 : 56;
+  }
+  const int l_time = (time_font == FONT_SIZE_TIME_MASSIVE) ? FONT_LEADING_80
+                   : (time_font == FONT_SIZE_TIME_HUGE) ? FONT_LEADING_72
+                   : (time_font == FONT_SIZE_TIME) ? FONT_LEADING_50
+                   : FONT_LEADING_60;
 #endif
-  int block_h = time_rect_h + 3 + 18;
+
+  GRect logo_bounds = show_logo ? gbitmap_get_bounds(s_logo_bmp) : GRectZero;
+
+  // Vertical block: time (+ logo below in hero) (+ date) — centered
+  int block_h = time_rect_h;
+  if (hero && show_logo) block_h += 4 + logo_bounds.size.h;
+  if (date_on) block_h += 3 + 18;
   int y_offset = content.origin.y + (content.size.h - block_h) / 2;
   if (y_offset < content.origin.y) y_offset = content.origin.y;
 
-  // Dynamic leading: matches the selected time font (50/60/72px)
-  const int l_time = (time_font == FONT_SIZE_TIME_HUGE) ? FONT_LEADING_72
-                     : show_logo ? FONT_LEADING_50 : FONT_LEADING_60;
-  const int l18 = FONT_LEADING_18;
-
-  // Fixed 64px logo zone at the right edge — time AND date keep the
+  // Logo zone on the right (normal mode only) — time AND date keep the
   // same position whatever logo is active
-  GRect logo_bounds = show_logo ? gbitmap_get_bounds(s_logo_bmp) : GRectZero;
   const int LOGO_ZONE_W = 64;
   const int LOGO_GAP = 6;
   int time_w = content.size.w;
-  if (show_logo) time_w -= LOGO_ZONE_W + LOGO_GAP;
+  if (show_logo && !hero) time_w -= LOGO_ZONE_W + LOGO_GAP;
+
   GRect time_rect = GRect(content.origin.x, y_offset - l_time,
                           time_w, time_rect_h + l_time);
-
   graphics_context_set_text_color(ctx, watchface_get_color_time());
   graphics_draw_text(ctx, s_time_buf, fonts_get(time_font), time_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 
-  // Date: DOW DD MON — same width as time zone (aligned with it)
-  GRect date_rect = GRect(content.origin.x,
-                           y_offset + time_rect_h + 3 - l18,
-                           time_w, 18 + l18);
-  graphics_context_set_text_color(ctx, watchface_get_color_value());
-  graphics_draw_text(ctx, s_date_buf, fonts_get(FONT_SIZE_VALUE), date_rect,
-                     GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentCenter, NULL);
+  // Cursor below the time: hero draws the logo there, then the date
+  int y = y_offset + time_rect_h;
+  if (hero && show_logo) {
+    y += 4;
+    GRect logo_rect = GRect(
+        content.origin.x + (content.size.w - logo_bounds.size.w) / 2,
+        y, logo_bounds.size.w, logo_bounds.size.h);
+    graphics_context_set_compositing_mode(ctx, GCompOpSet);
+    graphics_draw_bitmap_in_rect(ctx, s_logo_bmp, logo_rect);
+    y += logo_bounds.size.h;
+  }
 
-  // Constructor logo — right side, full-width 64px, height varies per logo.
+  if (date_on) {
+    const int l18 = FONT_LEADING_18;
+    GRect date_rect = GRect(content.origin.x, y + 3 - l18, time_w, 18 + l18);
+    graphics_context_set_text_color(ctx, watchface_get_color_value());
+    graphics_draw_text(ctx, s_date_buf, fonts_get(FONT_SIZE_VALUE), date_rect,
+                       GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentCenter, NULL);
+  }
+
+  // Constructor logo — right side, full-width 64px zone (normal mode only).
   // Vertically + horizontally centered in the fixed right zone.
-  if (show_logo) {
+  if (show_logo && !hero) {
     int logo_y = content.origin.y
                + (content.size.h - logo_bounds.size.h) / 2;
     if (logo_y < content.origin.y) logo_y = content.origin.y;

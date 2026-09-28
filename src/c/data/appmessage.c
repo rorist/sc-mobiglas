@@ -125,6 +125,14 @@ static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
     storage_save_color_warn(c);
   }
 
+  // Show date toggle (Int32 1/0) — hides the date line, frees space for time
+  Tuple *show_date = dict_find(iter, MESSAGE_KEY_KEY_SHOW_DATE);
+  if (show_date) {
+    bool show = show_date->value->int32 != 0;
+    watchface_set_show_date(show);
+    storage_save_show_date(show ? 1 : 0);
+  }
+
   // Config — Clay sends each toggle as Int32 (1/0); rebuild the bitmask
   uint8_t config = watchface_get_config();
   uint8_t new_config = config;

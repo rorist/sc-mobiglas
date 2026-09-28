@@ -11,6 +11,10 @@ void storage_save_config(uint32_t config);
 uint32_t storage_load_logo(void);
 void storage_save_logo(uint32_t logo);
 
+// Show date toggle (1 = show, 0 = hide)
+uint32_t storage_load_show_date(void);
+void storage_save_show_date(uint32_t show);
+
 // Configurable text colors (persisted as GColor.argb)
 GColor storage_load_color_time(void);
 GColor storage_load_color_value(void);

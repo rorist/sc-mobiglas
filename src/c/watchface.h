@@ -87,6 +87,10 @@ uint8_t watchface_get_config(void);
 uint8_t watchface_get_logo(void);
 void watchface_set_logo(uint8_t logo);
 
+// Date line visibility (hidden date frees space -> bigger time font)
+bool watchface_get_show_date(void);
+void watchface_set_show_date(bool show);
+
 // Configurable text colors (runtime)
 GColor watchface_get_color_time(void);
 GColor watchface_get_color_value(void);

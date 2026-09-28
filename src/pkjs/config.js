@@ -19,6 +19,12 @@ module.exports = [
         "defaultValue": false
       },
       {
+        "type": "toggle",
+        "messageKey": "KEY_SHOW_DATE",
+        "label": "Show date",
+        "defaultValue": true
+      },
+      {
         "type": "select",
         "messageKey": "KEY_LOGO",
         "label": "Constructor logo",

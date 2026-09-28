@@ -39,6 +39,7 @@
       "KEY_TEMP": 0,
       "KEY_WEATHER": 1,
       "KEY_REQUEST_WEATHER": 2,
+      "KEY_SHOW_DATE": 3,
       "KEY_12H": 5,
       "KEY_FAHRENHEIT": 6,
       "KEY_SHOW_MEDICAL": 7,
@@ -103,6 +104,12 @@
         {
           "type": "font",
           "name": "FONT_RAJDHANI_72",
+          "file": "fonts/rajdhani-medium.ttf",
+          "characterRegex": "[0-9: ]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_RAJDHANI_80",
           "file": "fonts/rajdhani-medium.ttf",
           "characterRegex": "[0-9: ]"
         },

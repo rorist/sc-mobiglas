@@ -11,6 +11,7 @@ static Layer *s_root_layer;
 static Layer *s_panel_layers[PANEL_COUNT];
 static uint8_t s_config = CONFIG_DEFAULT;
 static uint8_t s_logo = 0;
+static bool s_show_date = true;
 static GRect s_screen_bounds;
 
 // Configurable text colors
@@ -83,9 +84,20 @@ void watchface_create(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   s_screen_bounds = layer_get_bounds(window_layer);
 
-  // Restore persisted settings (config bitmask, logo, text colors)
+  // Restore persisted settings (config bitmask, logo, date, text colors)
   s_config = storage_load_config();
   s_logo = storage_load_logo();
+  s_show_date = storage_load_show_date() != 0;
+  // TEMP: layout harness — force config/logo for capture. Remove after validation.
+#define LAYOUT_TEST_OVERRIDE
+#if defined(LAYOUT_TEST_OVERRIDE)
+#define LAYOUT_TEST_CONFIG CONFIG_DEFAULT   /* 0 = time only; CONFIG_DEFAULT = all panels */
+#define LAYOUT_TEST_NOLOGO 1
+  s_config = (uint8_t)(LAYOUT_TEST_CONFIG);
+#if LAYOUT_TEST_NOLOGO
+  s_logo = 0;
+#endif
+#endif
   s_color_time = storage_load_color_time();
   s_color_value = storage_load_color_value();
   s_color_label = storage_load_color_label();
@@ -148,6 +160,16 @@ uint8_t watchface_get_logo(void) {
 void watchface_set_logo(uint8_t logo) {
   if (logo == s_logo) return;
   s_logo = logo;
+  time_panel_refresh();
+}
+
+bool watchface_get_show_date(void) {
+  return s_show_date;
+}
+
+void watchface_set_show_date(bool show) {
+  if (show == s_show_date) return;
+  s_show_date = show;
   time_panel_refresh();
 }
 

@@ -13,8 +13,10 @@ void fonts_init(void) {
       resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_40));
   s_fonts[FONT_SIZE_TIME_BIG] = fonts_load_custom_font(
       resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_48));
-  // Flint is too narrow for 72px: TIME_HUGE reuses the 48px face
+  // Flint is too narrow for 72/80px: TIME_HUGE/TIME_MASSIVE reuse the 48px face
   s_fonts[FONT_SIZE_TIME_HUGE] = fonts_load_custom_font(
+      resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_48));
+  s_fonts[FONT_SIZE_TIME_MASSIVE] = fonts_load_custom_font(
       resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_48));
 #else
   s_fonts[FONT_SIZE_TIME] = fonts_load_custom_font(
@@ -23,6 +25,8 @@ void fonts_init(void) {
       resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_60));
   s_fonts[FONT_SIZE_TIME_HUGE] = fonts_load_custom_font(
       resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_72));
+  s_fonts[FONT_SIZE_TIME_MASSIVE] = fonts_load_custom_font(
+      resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_80));
 #endif
 }
 
