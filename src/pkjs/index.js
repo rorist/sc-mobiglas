@@ -4,7 +4,6 @@
 // true value). Clay converts toggle scalars to integers but leaves checkbox
 // array items as booleans — normalize every boolean to 1/0 before sending.
 // pypkjs (emulator) handles booleans correctly, phones do not.
-// [SEND] log kept TEMPORARILY for #13 validation. Remove once confirmed.
 var _origSend = Pebble.sendAppMessage;
 Pebble.sendAppMessage = function (payload, ok, nack) {
   var norm = {};

@@ -5,6 +5,9 @@
 //  12 KEY_HUMIDITY (Int8 %),           13 KEY_UV (Int8 index),
 //  14 KEY_SUNRISE (CString "HH:MM"),   15 KEY_SUNSET (CString "HH:MM")
 
+// Cache: fresh (<10 min) results are kept in phone-side localStorage; reopening
+// the watchface re-sends the cache instantly (no GPS / Open-Meteo round-trip).
+
 // WMO weathercode → display label
 function wmo_label(code) {
   if (code === 0) return 'CLEAR';
@@ -14,6 +17,35 @@ function wmo_label(code) {
   if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'SNOW';
   if (code >= 95 && code <= 99) return 'STORM';
   return 'N/A';
+}
+
+// Phone-side weather cache: a fresh (< TTL) payload is re-sent as-is when the
+// watchface is reopened, skipping geolocation and the Open-Meteo request.
+// localStorage only stores strings — the payload is JSON-serialized with its date.
+var CACHE_KEY = 'sc-weather-cache';
+var CACHE_TTL_MS = 10 * 60 * 1000; // 10 min, matches geolocation maximumAge
+
+function load_cache() {
+  try {
+    var raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    var c = JSON.parse(raw);
+    if (!c || !c.p) return null;
+    var age = Date.now() - c.t;
+    if (!isFinite(age) || age < 0 || age > CACHE_TTL_MS) return null; // stale
+    return { payload: c.p, age_s: Math.round(age / 1000) };
+  } catch (e) {
+    try { localStorage.removeItem(CACHE_KEY); } catch (e2) {} // corrupt: clean up
+    return null;
+  }
+}
+
+function save_cache(payload) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), p: payload }));
+  } catch (e) {
+    console.log('Weather cache save failed: ' + e.message);
+  }
 }
 
 function send_weather(payload) {
@@ -79,6 +111,7 @@ function fetch_weather(lat, lon) {
         payload[keys.KEY_SUNSET] = hhmm(daily.sunset[0]);
       }
       send_weather(payload);
+      save_cache(payload);
     } catch (e) {
       console.log('Open-Meteo parse error: ' + e.message);
     }
@@ -103,6 +136,12 @@ function get_position() {
 }
 
 function fetch() {
+  var cached = load_cache();
+  if (cached) {
+    console.log('Weather cache hit (' + cached.age_s + 's old)');
+    send_weather(cached.payload);
+    return;
+  }
   if (typeof navigator === 'undefined' || !navigator.geolocation) {
     console.log('Geolocation unavailable');
     return;

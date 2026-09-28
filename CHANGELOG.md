@@ -1,5 +1,11 @@
 # Changelog — sc-mobiglas
 
+## [0.3.0] — 2026-09-29
+
+### Added
+
+- **Weather cache** — returning to the watchface now shows the last weather data (up to 10 minutes old) instantly, instead of `---` placeholders while re-fetching; also fewer weather API requests
+
 ## [0.2.0] — 2026-09-28
 
 ### Added
