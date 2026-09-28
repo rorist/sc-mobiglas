@@ -22,15 +22,15 @@ layout, Rajdhani font, cyan-on-black palette.
 
 ### Color Palette (defined in `watchface.h`)
 
-| Token | Pebble constant | Exact hex | Usage |
-|---|---|---|---|
-| `COLOR_PRIMARY` | `GColorVividCerulean` | `#00aaff` | Borders, icons, chrome |
-| `COLOR_GAUGE_BG` | `GColorCobaltBlue` | `#0055aa` | Ring gauge tracks |
-| `COLOR_BG` | `GColorBlack` | `#000000` | Window background |
-| `COLOR_PANEL_BG` | `PBL_IF_BW_ELSE(GColorBlack, GColorOxfordBlue)` | `#000055` | Panel fill (black on flint) |
-| `COLOR_WARN` | `GColorOrange` | `#ff5500` | RAIN/SNOW icons, low battery, HR abnormal |
-| `COLOR_SAFE` | `GColorMalachite` | `#00ff55` | Charging battery, HR normal ring |
-| `COLOR_ALERT` | `GColorRed` | `#ff0000` | STORM icon |
+| Token            | Pebble constant                                 | Exact hex | Usage                                     |
+| ---------------- | ----------------------------------------------- | --------- | ----------------------------------------- |
+| `COLOR_PRIMARY`  | `GColorVividCerulean`                           | `#00aaff` | Borders, icons, chrome                    |
+| `COLOR_GAUGE_BG` | `GColorCobaltBlue`                              | `#0055aa` | Ring gauge tracks                         |
+| `COLOR_BG`       | `GColorBlack`                                   | `#000000` | Window background                         |
+| `COLOR_PANEL_BG` | `PBL_IF_BW_ELSE(GColorBlack, GColorOxfordBlue)` | `#000055` | Panel fill (black on flint)               |
+| `COLOR_WARN`     | `GColorOrange`                                  | `#ff5500` | RAIN/SNOW icons, low battery, HR abnormal |
+| `COLOR_SAFE`     | `GColorMalachite`                               | `#00ff55` | Charging battery, HR normal ring          |
+| `COLOR_ALERT`    | `GColorRed`                                     | `#ff0000` | STORM icon                                |
 
 Configurable text colors (runtime via `watchface_get_color_*()` getters, defaults in
 `watchface.h`, Clay pickers, storage-persisted):
@@ -57,7 +57,7 @@ Configurable text colors (runtime via `watchface_get_color_*()` getters, default
 - **Fallback:** system Gothic 14 / 18 if custom font unavailable
 - **Leading compensation (`FONT_LEADING_*`):** large Rajdhani sizes reserve empty space above
   glyphs — text rects are shifted UP by `FONT_LEADING_14=2, FONT_LEADING_18=3,
-  FONT_LEADING_50/60` (values differ flint vs emery/gabbro) so glyphs align with the intended
+FONT_LEADING_50/60` (values differ flint vs emery/gabbro) so glyphs align with the intended
   visual top.
 
 > **Font subset:** 14/18 use `characterRegex = "[0-9:A-Za-z /.%°-]"` (degree symbol included);
@@ -79,6 +79,7 @@ Configurable text colors (runtime via `watchface_get_color_*()` getters, default
   (`panel_content_rect()` in `panels/panel.h`)
 
 ### mobiGlas Reference Layout (emery, all panels on)
+
 ```
 ┌─────────────────────────────────┐
 │  21:47                 [LOGO]   │
@@ -109,21 +110,23 @@ bounds; only margins/gaps/min heights are fixed. `MARGIN = PBL_IF_ROUND_ELSE(24,
 
 #### Panel minimum heights (`watchface.h`, per platform)
 
-| Panel | emery / gabbro | flint |
-|---|---|---|
-| TIME | 88 (60px font) | 70 (48px font) |
-| MEDICAL | 70 | 58 |
-| ENVIRON | 70 | 58 |
-| SYSTEMS | 32 (BAT inline in header) | 24 |
+| Panel   | emery / gabbro            | flint          |
+| ------- | ------------------------- | -------------- |
+| TIME    | 88 (60px font)            | 70 (48px font) |
+| MEDICAL | 70                        | 58             |
+| ENVIRON | 70                        | 58             |
+| SYSTEMS | 32 (BAT inline in header) | 24             |
 
 #### Row structure
-| Row | Panels | Width |
-|---|---|---|
-| 0 | TIME (always) | full width |
-| 1 | MEDICAL + ENVIRON side-by-side, or one full-width | half / full |
-| 2 | SYSTEMS | full width |
+
+| Row | Panels                                            | Width       |
+| --- | ------------------------------------------------- | ----------- |
+| 0   | TIME (always)                                     | full width  |
+| 1   | MEDICAL + ENVIRON side-by-side, or one full-width | half / full |
+| 2   | SYSTEMS                                           | full width  |
 
 #### Rules
+
 - TIME is always visible, never disabled
 - Both MEDICAL + ENVIRON → side-by-side; only one → full-width
 - SYSTEMS always at bottom row; surplus height distributed evenly across active rows
@@ -152,13 +155,13 @@ constructor logo picker (9 logos + None) · 5 color pickers + "reset colors" but
 **C-side bitmask** (single canonical definition, `watchface.h`) — rebuilt from
 the individual Clay toggles by `prv_apply_toggle()` in `appmessage.c`:
 
-| Bit | Constant | Default | Meaning |
-|---|---|---|---|
-| 0 | `CONFIG_12H` | off | 12-hour time format |
-| 1 | `CONFIG_FAHRENHEIT` | off | Temperature in °F |
-| 2 | `CONFIG_MEDICAL` | on | Show MEDICAL panel |
-| 3 | `CONFIG_ENVIRON` | on | Show ENVIRON panel |
-| 4 | `CONFIG_SYSTEMS` | on | Show SYSTEMS panel |
+| Bit | Constant            | Default | Meaning             |
+| --- | ------------------- | ------- | ------------------- |
+| 0   | `CONFIG_12H`        | off     | 12-hour time format |
+| 1   | `CONFIG_FAHRENHEIT` | off     | Temperature in °F   |
+| 2   | `CONFIG_MEDICAL`    | on      | Show MEDICAL panel  |
+| 3   | `CONFIG_ENVIRON`    | on      | Show ENVIRON panel  |
+| 4   | `CONFIG_SYSTEMS`    | on      | Show SYSTEMS panel  |
 
 Default: `CONFIG_MEDICAL | CONFIG_ENVIRON | CONFIG_SYSTEMS` (all panels on, 24h, Celsius).
 `watchface_get_config()` is the source of truth. Capabilities:
@@ -170,6 +173,7 @@ Default: `CONFIG_MEDICAL | CONFIG_ENVIRON | CONFIG_SYSTEMS` (all panels on, 24h,
 ## Data Per Panel
 
 ### TIME
+
 - Line 1: `HH:MM` — 60px centered (50px when a logo is active: fixed 64px logo zone on the
   right edge, time AND date keep the same position whatever logo is chosen; flint: 48px,
   no logo — doesn't fit 144px width)
@@ -177,6 +181,7 @@ Default: `CONFIG_MEDICAL | CONFIG_ENVIRON | CONFIG_SYSTEMS` (all panels on, 24h,
 - Config: 12/24h via `CONFIG_12H`
 
 ### MEDICAL
+
 - Header: `MEDICAL`
 - **Dual concentric ring gauge** (`draw_dual_ring()`): outer ring = heart rate %, inner ring
   = steps %
@@ -189,6 +194,7 @@ Default: `CONFIG_MEDICAL | CONFIG_ENVIRON | CONFIG_SYSTEMS` (all panels on, 24h,
 - Values fall back to `---` if health data unavailable (ring shows 0%)
 
 ### ENVIRON
+
 - Header: `ENVIRON`
 - Temperature `{t}°C`/`{t}°F` + 8×8 holo weather icon (via `KEY_TEMP` / `KEY_WEATHER`)
 - Wind speed + direction (with NE arrow icon) (via `KEY_WIND_SPEED` / `KEY_WIND_DIR`)
@@ -198,6 +204,7 @@ Default: `CONFIG_MEDICAL | CONFIG_ENVIRON | CONFIG_SYSTEMS` (all panels on, 24h,
 - All fields fall back to `---` / `UNKNOWN` until AppMessage received
 
 ### SYSTEMS
+
 - Header: `SYSTEMS` with right-aligned `BAT: {n}%` (`draw_panel_header_ex()`)
 - Battery bar: 6-segment bar via `draw_battery_bar()` in `draw_utils.c`
 - Semantic colors: green (`COLOR_SAFE`) while charging, orange (`COLOR_WARN`) at ≤ 20%,
@@ -229,21 +236,21 @@ config.js ───────┼─► index.js ──► AppMessage.send()
 
 ### AppMessage Keys (defined in `package.json` → `messageKeys`)
 
-| Key | Type | Source | Description |
-|---|---|---|---|
-| `KEY_TEMP` | `Int8` | weather.js | Temperature (converted °C/°F phone-side) |
-| `KEY_WEATHER` | `CString` | weather.js | Condition: `CLEAR`, `CLOUDY`, `FOG`, `RAIN`, `SNOW`, `STORM`, `UNKNOWN` |
-| `KEY_REQUEST_WEATHER` | `Uint8` | watch → phone | Watch asks for a weather refresh (every 30 min) |
-| `KEY_WIND_SPEED` | `Int16` | weather.js | Wind speed km/h |
-| `KEY_WIND_DIR` | `Int16` | weather.js | Wind direction degrees |
-| `KEY_HUMIDITY` | `Int8` | weather.js | Relative humidity % |
-| `KEY_UV` | `Int8` | weather.js | UV index |
-| `KEY_SUNRISE` / `KEY_SUNSET` | `CString` | weather.js | `"HH:MM"`, formatted phone-side |
-| `KEY_12H` | `Int32` | Clay config.js | 12h format toggle (1/0) |
-| `KEY_FAHRENHEIT` | `Int32` | Clay config.js | °F toggle (1/0) |
-| `KEY_SHOW_MEDICAL` / `KEY_SHOW_ENVIRON` / `KEY_SHOW_SYSTEMS` | `Int32` | Clay config.js | Panel toggles |
-| `KEY_LOGO` | `CString` `"0"`–`"9"` | Clay config.js | Constructor logo (9 = None) |
-| `KEY_COLOR_*` | `Int32` `0xRRGGBB` | Clay config.js | Text colors (CString `#rrggbb` tolerated) |
+| Key                                                          | Type                  | Source         | Description                                                             |
+| ------------------------------------------------------------ | --------------------- | -------------- | ----------------------------------------------------------------------- |
+| `KEY_TEMP`                                                   | `Int8`                | weather.js     | Temperature (converted °C/°F phone-side)                                |
+| `KEY_WEATHER`                                                | `CString`             | weather.js     | Condition: `CLEAR`, `CLOUDY`, `FOG`, `RAIN`, `SNOW`, `STORM`, `UNKNOWN` |
+| `KEY_REQUEST_WEATHER`                                        | `Uint8`               | watch → phone  | Watch asks for a weather refresh (every 30 min)                         |
+| `KEY_WIND_SPEED`                                             | `Int16`               | weather.js     | Wind speed km/h                                                         |
+| `KEY_WIND_DIR`                                               | `Int16`               | weather.js     | Wind direction degrees                                                  |
+| `KEY_HUMIDITY`                                               | `Int8`                | weather.js     | Relative humidity %                                                     |
+| `KEY_UV`                                                     | `Int8`                | weather.js     | UV index                                                                |
+| `KEY_SUNRISE` / `KEY_SUNSET`                                 | `CString`             | weather.js     | `"HH:MM"`, formatted phone-side                                         |
+| `KEY_12H`                                                    | `Int32`               | Clay config.js | 12h format toggle (1/0)                                                 |
+| `KEY_FAHRENHEIT`                                             | `Int32`               | Clay config.js | °F toggle (1/0)                                                         |
+| `KEY_SHOW_MEDICAL` / `KEY_SHOW_ENVIRON` / `KEY_SHOW_SYSTEMS` | `Int32`               | Clay config.js | Panel toggles                                                           |
+| `KEY_LOGO`                                                   | `CString` `"0"`–`"9"` | Clay config.js | Constructor logo (9 = None)                                             |
+| `KEY_COLOR_*`                                                | `Int32` `0xRRGGBB`    | Clay config.js | Text colors (CString `#rrggbb` tolerated)                               |
 
 AppMessage buffer: minimum 256 bytes (`app_message_open(256, 256, ...)`).
 
@@ -252,6 +259,7 @@ AppMessage buffer: minimum 256 bytes (`app_message_open(256, 256, ...)`).
 ## Phone-side (PKJS — `src/pkjs/`)
 
 ### weather.js — Open-Meteo (no API key, geolocation via PKJS)
+
 ```js
 // GET https://api.open-meteo.com/v1/forecast
 //   ?latitude={lat}&longitude={lon}
@@ -264,6 +272,7 @@ AppMessage buffer: minimum 256 bytes (`app_message_open(256, 256, ...)`).
 ```
 
 ### config.js + custom-clay.js
+
 - Clay configuration array (`module.exports = [...]`) — NO manual HTML
 - Clay framework auto-generates the page, handles `showConfiguration` /
   `webviewclosed`, persists to phone localStorage, auto-sends on app launch
@@ -271,6 +280,7 @@ AppMessage buffer: minimum 256 bytes (`app_message_open(256, 256, ...)`).
   5 color pickers, reset-colors button (custom-clay.js wires a pure-UI customFn)
 
 ### index.js
+
 - Keep thin: subscribe to `ready` / `appmessage` (weather fetch on `KEY_REQUEST_WEATHER`)
 - Delegate all logic to `weather.js` / `config.js`
 
@@ -279,6 +289,7 @@ AppMessage buffer: minimum 256 bytes (`app_message_open(256, 256, ...)`).
 ## Architecture Details
 
 ### Drawing Pattern
+
 ```c
 // Every panel: LayerUpdateProc owns GRect bounds
 // 1. panel_draw_chrome(ctx, bounds, color) — fill + rounded border (panels/panel.h)
@@ -288,10 +299,11 @@ AppMessage buffer: minimum 256 bytes (`app_message_open(256, 256, ...)`).
 ```
 
 ### Key functions in `ui/draw_utils.c`
+
 - `draw_panel_fill()` / `draw_panel_border()` — rounded (r3) panel fill + border
 - `draw_corner_accents()` — L-shaped corner marks (**unused**, kept for reference)
 - `draw_panel_header()` / `draw_panel_header_ex()` — accent bar + label + partial underline
-  + ↗ arrow; `_ex` adds right-aligned label
+  - ↗ arrow; `_ex` adds right-aligned label
 - `draw_battery_bar()` — 6-segment battery indicator
 - `draw_ring_gauge()`, `draw_dual_ring()` — circular gauges (MEDICAL)
 - `draw_weather_icon()` — 8×8 holo icons, 7 conditions (CLEAR/CLOUDY/FOG/RAIN/SNOW/STORM/UNKNOWN)
@@ -301,6 +313,7 @@ AppMessage buffer: minimum 256 bytes (`app_message_open(256, 256, ...)`).
 > Use Serena `find_symbol` / `find_referencing_symbols` before creating any new helper.
 
 ### Timing
+
 - `tick_timer_service_subscribe(MINUTE_UNIT)` — minute ticks update TIME panel (no seconds
   display → no per-second wakeups, battery-friendly)
 - MEDICAL: `prv_refresh_health()` called in the panel's update proc (refresh on every redraw;
@@ -312,6 +325,7 @@ AppMessage buffer: minimum 256 bytes (`app_message_open(256, 256, ...)`).
 - Config / panel toggles / colors / logo: event-driven via AppMessage (no polling)
 
 ### Health API (correct function names)
+
 ```c
 // Heart rate
 HealthValue hr = health_service_peek_current_value(HealthMetricHeartRateBPM);
@@ -323,6 +337,7 @@ HealthValue steps = health_service_sum_today(HealthMetricStepCount);
 HealthValue avg = health_service_sum_averaged(
   HealthMetricStepCount, start, now, HealthServiceTimeScopeDaily);
 ```
+
 Requires `"health"` in `capabilities` in `package.json` (already set).
 Always check `HealthServiceAccessibilityMaskAvailable` before reading. Fallback: `"---"`.
 
@@ -333,25 +348,26 @@ Always check `HealthServiceAccessibilityMaskAvailable` before reading. Fallback:
 Always use Serena to navigate and edit this project. Do NOT use bash, grep, cat,
 find, sed or ls for file operations unless Serena cannot do the task.
 
-| Use case | Tool |
-|---|---|
-| List files in a directory | `list_dir` |
-| Find a file by name/mask | `find_file` |
-| Read a file | `read_file` |
-| File overview (symbols: functions, classes, structs) | `get_symbols_overview` |
-| Find a symbol (function, variable, struct) | `find_symbol` |
-| Search text/regex pattern in code | `search_for_pattern` |
-| Check all usages before refactoring | `find_referencing_symbols` |
-| Navigate to a symbol's declaration | `find_declaration` |
-| Replace a symbol's body | `replace_symbol_body` |
-| Insert code before/after a symbol | `insert_before_symbol` / `insert_after_symbol` |
-| Generic replacement (literal or regex) | `replace_content` |
-| Rename a symbol across the codebase | `rename_symbol` |
-| Create a new file | `create_text_file` |
-| Build diagnostics for a file | `get_diagnostics_for_file` |
-| Read/write project memories | `read_memory` / `write_memory` |
+| Use case                                             | Tool                                           |
+| ---------------------------------------------------- | ---------------------------------------------- |
+| List files in a directory                            | `list_dir`                                     |
+| Find a file by name/mask                             | `find_file`                                    |
+| Read a file                                          | `read_file`                                    |
+| File overview (symbols: functions, classes, structs) | `get_symbols_overview`                         |
+| Find a symbol (function, variable, struct)           | `find_symbol`                                  |
+| Search text/regex pattern in code                    | `search_for_pattern`                           |
+| Check all usages before refactoring                  | `find_referencing_symbols`                     |
+| Navigate to a symbol's declaration                   | `find_declaration`                             |
+| Replace a symbol's body                              | `replace_symbol_body`                          |
+| Insert code before/after a symbol                    | `insert_before_symbol` / `insert_after_symbol` |
+| Generic replacement (literal or regex)               | `replace_content`                              |
+| Rename a symbol across the codebase                  | `rename_symbol`                                |
+| Create a new file                                    | `create_text_file`                             |
+| Build diagnostics for a file                         | `get_diagnostics_for_file`                     |
+| Read/write project memories                          | `read_memory` / `write_memory`                 |
 
 **Rules:**
+
 1. Before creating any new function: `find_symbol` (does it exist?) + `find_referencing_symbols` (who uses what I'm touching?)
 2. Before editing a file: `get_symbols_overview` + `read_file`
 3. Never duplicate logic already in `panel.h` or `draw_utils.c`
@@ -364,6 +380,7 @@ find, sed or ls for file operations unless Serena cannot do the task.
 ## Development Commands
 
 ```bash
+pebble clean                        # clean build files
 pebble build                        # build for all targetPlatforms
 pebble install --emulator emery     # run in emulator
 pebble screenshot --emulator emery screenshot.png  # capture emulator screen as PNG

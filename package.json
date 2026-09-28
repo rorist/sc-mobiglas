@@ -101,6 +101,12 @@
           "characterRegex": "[0-9: ]"
         },
         {
+          "type": "font",
+          "name": "FONT_RAJDHANI_72",
+          "file": "fonts/rajdhani-medium.ttf",
+          "characterRegex": "[0-9: ]"
+        },
+        {
           "type": "bitmap",
           "name": "IMAGE_LOGO_AEGIS",
           "file": "images/logo_aegis.png"

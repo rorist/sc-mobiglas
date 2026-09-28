@@ -2,54 +2,146 @@
 #include "panel.h"
 #include "../watchface.h"
 
+#define MED_SLOT_COUNT 4
+#define MED_SLEEP_GOAL_S (8 * 3600)   // 8h sleep goal
+#define MED_KCAL_GOAL_FALLBACK 500
+
+// One metric slot: label + formatted value + gauge percent + colors.
+// Full mode renders all 4 slots as one row of rings; compact mode renders
+// slots 0-1 only. Future configurable metrics (#13) plug in here.
+typedef struct {
+  const char *label;
+  char value[12];
+  int pct;
+  GColor fill;
+  GColor value_col;
+} MedSlot;
+
 static Layer *s_layer;
-static char s_hr_buf[12];
-static char s_steps_buf[12];   // "12345" or "---"
-static int  s_hr_pct;          // 0..100 mapped from 40..180 bpm
-static int  s_steps_pct;       // 0..100 steps_today / avg_daily
-static int  s_hr_bpm;          // raw bpm, <=0 = unavailable
+static MedSlot s_slots[MED_SLOT_COUNT];
 
-static void prv_refresh_health(void) {
+static void prv_fill_hr(void) {
+  MedSlot *s = &s_slots[0];
+  s->label = "BPM";
   HealthValue hr = health_service_peek_current_value(HealthMetricHeartRateBPM);
-  s_hr_bpm = (int)hr;
-  if (hr > 0) {
-    snprintf(s_hr_buf, sizeof(s_hr_buf), "%d", (int)hr);
-    int pct = ((int)hr - 40) * 100 / (180 - 40);
-    if (pct < 0) pct = 0;
-    if (pct > 100) pct = 100;
-    s_hr_pct = pct;
+  int bpm = (int)hr;
+  bool normal = (bpm >= 50 && bpm <= 100);
+  if (bpm > 0) {
+    snprintf(s->value, sizeof(s->value), "%d", bpm);
+    int pct = (bpm - 40) * 100 / (180 - 40);
+    s->pct = (pct < 0) ? 0 : (pct > 100 ? 100 : pct);
   } else {
-    snprintf(s_hr_buf, sizeof(s_hr_buf), "---");
-    s_hr_pct = 0;
+    snprintf(s->value, sizeof(s->value), "---");
+    s->pct = 0;
   }
+  s->fill = normal ? COLOR_SAFE : watchface_get_color_warn();
+  s->value_col = normal ? watchface_get_color_value()
+                        : watchface_get_color_warn();
+}
 
+static void prv_fill_steps(void) {
+  MedSlot *s = &s_slots[1];
+  s->label = "STEPS";
   HealthValue steps = health_service_sum_today(HealthMetricStepCount);
   if (steps > 0) {
-    snprintf(s_steps_buf, sizeof(s_steps_buf), "%d", (int)steps);
+    snprintf(s->value, sizeof(s->value), "%d", (int)steps);
   } else {
-    snprintf(s_steps_buf, sizeof(s_steps_buf), "---");
+    snprintf(s->value, sizeof(s->value), "---");
   }
 
-  // Steps goal baseline: user's daily average, fallback 10000
+  // Goal: user's daily average, fallback 10000
   time_t now = time(NULL);
   time_t start = time_start_of_today();
-  HealthValue avg = 0;
-  if (health_service_metric_averaged_accessible(HealthMetricStepCount, start, now,
-        HealthServiceTimeScopeDaily) == HealthServiceAccessibilityMaskAvailable) {
-    avg = health_service_sum_averaged(HealthMetricStepCount, start, now,
-                                      HealthServiceTimeScopeDaily);
+  HealthValue goal = 0;
+  if (health_service_metric_averaged_accessible(HealthMetricStepCount, start,
+        now, HealthServiceTimeScopeDaily)
+        == HealthServiceAccessibilityMaskAvailable) {
+    goal = health_service_sum_averaged(HealthMetricStepCount, start, now,
+                                       HealthServiceTimeScopeDaily);
   }
-  int goal = (avg > 0) ? (int)avg : 10000;
   if (goal <= 0) goal = 10000;
-  int spct = (steps > 0) ? ((int)steps * 100 / goal) : 0;
-  if (spct < 0) spct = 0;
-  if (spct > 100) spct = 100;
-  s_steps_pct = spct;
+  int pct = (steps > 0) ? ((int)steps * 100 / (int)goal) : 0;
+  s->pct = (pct < 0) ? 0 : (pct > 100 ? 100 : pct);
+  s->fill = watchface_get_color_label();
+  s->value_col = watchface_get_color_value();
+}
+
+static void prv_fill_sleep(void) {
+  MedSlot *s = &s_slots[2];
+  s->label = "SLEEP";
+  HealthValue secs = health_service_sum_today(HealthMetricSleepSeconds);
+  if (secs > 0) {
+    int h = (int)secs / 3600;
+    int m = ((int)secs % 3600) / 60;
+    snprintf(s->value, sizeof(s->value), "%dh%02d", h, m);
+    int pct = (int)secs * 100 / MED_SLEEP_GOAL_S;
+    s->pct = (pct > 100) ? 100 : pct;
+  } else {
+    snprintf(s->value, sizeof(s->value), "---");
+    s->pct = 0;
+  }
+  s->fill = watchface_get_color_label();
+  s->value_col = watchface_get_color_value();
+}
+
+static void prv_fill_kcal(void) {
+  MedSlot *s = &s_slots[3];
+  s->label = "KCAL";
+  HealthValue kcal = health_service_sum_today(HealthMetricActiveKCalories);
+  if (kcal > 0) {
+    snprintf(s->value, sizeof(s->value), "%d", (int)kcal);
+  } else {
+    snprintf(s->value, sizeof(s->value), "---");
+  }
+
+  // Goal: user's daily average, fallback 500
+  time_t now = time(NULL);
+  time_t start = time_start_of_today();
+  HealthValue goal = 0;
+  if (health_service_metric_averaged_accessible(HealthMetricActiveKCalories,
+        start, now, HealthServiceTimeScopeDaily)
+        == HealthServiceAccessibilityMaskAvailable) {
+    goal = health_service_sum_averaged(HealthMetricActiveKCalories, start, now,
+                                       HealthServiceTimeScopeDaily);
+  }
+  if (goal <= 0) goal = MED_KCAL_GOAL_FALLBACK;
+  int pct = (kcal > 0) ? ((int)kcal * 100 / (int)goal) : 0;
+  s->pct = (pct < 0) ? 0 : (pct > 100 ? 100 : pct);
+  s->fill = watchface_get_color_label();
+  s->value_col = watchface_get_color_value();
+}
+
+static void prv_refresh_health(void) {
+  prv_fill_hr();
+  prv_fill_steps();
+  prv_fill_sleep();
+  prv_fill_kcal();
+}
+
+// Draw one ring cell: ring gauge with value centered inside, label below.
+static void prv_draw_ring_cell(GContext *ctx, int x, int y, int rd,
+                               int cell_w, const MedSlot *slot) {
+  draw_ring_gauge(ctx, GRect(x, y, rd, rd), slot->pct, 3,
+                  COLOR_GAUGE_BG, slot->fill);
+
+  graphics_context_set_text_color(ctx, slot->value_col);
+  graphics_draw_text(ctx, slot->value, fonts_get(FONT_SIZE_HEADER),
+                     GRect(x, y + (rd - 14) / 2 - FONT_LEADING_14,
+                           rd, 14 + FONT_LEADING_14),
+                     GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentCenter, NULL);
+
+  graphics_context_set_text_color(ctx, watchface_get_color_label());
+  graphics_draw_text(ctx, slot->label, fonts_get(FONT_SIZE_HEADER),
+                     GRect(x + (rd - cell_w) / 2, y + rd + 2 - FONT_LEADING_14,
+                           cell_w, 14 + FONT_LEADING_14),
+                     GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentCenter, NULL);
 }
 
 static void prv_update_proc(Layer *layer, GContext *ctx) {
   // Re-read health at draw time (cheap cached reads, no sensor wakeups):
-  // the panel is marked dirty every minute by watchface_tick, so HR/steps
+  // the panel is marked dirty every minute by watchface_tick, so values
   // stay fresh without any extra timer or health event subscription.
   prv_refresh_health();
 
@@ -62,19 +154,23 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   int cw = content.size.w;
   int ch = content.size.h;
 
-  // HR ring color: safe(green) 50..100 bpm, else warn(orange)
-  GColor hr_col = (s_hr_bpm >= 50 && s_hr_bpm <= 100)
-      ? COLOR_SAFE : watchface_get_color_warn();
+  if (cw >= 120) {
+    // Full mode: one row of 4 ring gauges (HR, STEPS, SLEEP, KCAL)
+    const int cell_w = cw / MED_SLOT_COUNT;
+    int rd = ch - 17;
+    int rd_max = cell_w - 6;
+    if (rd > rd_max) rd = rd_max;
+    if (rd < 16) rd = 16;
 
-  // Value color, overridden by warn when HR is abnormal
-  GColor hr_val_col = (s_hr_bpm >= 50 && s_hr_bpm <= 100)
-      ? watchface_get_color_value() : watchface_get_color_warn();
+    int y0 = cy + (ch - (rd + 16)) / 2;
+    if (y0 < cy) y0 = cy;
 
-  graphics_context_set_text_color(ctx, watchface_get_color_value());
-
-  bool compact = (cw < 120);
-  if (compact) {
-    // Two side-by-side mini ring gauges, values inside rings, labels below
+    for (int i = 0; i < MED_SLOT_COUNT; i++) {
+      int colx = cx + i * cell_w + (cell_w - rd) / 2;
+      prv_draw_ring_cell(ctx, colx, y0, rd, cell_w, &s_slots[i]);
+    }
+  } else {
+    // Compact mode: two side-by-side ring gauges (HR, STEPS)
     int rd = ch - 17;                   // ring + 2px gap + 14px label
     int rd_max = cw / 2 - 8;            // fit within own column
     if (rd > rd_max) rd = rd_max;
@@ -84,67 +180,8 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     int y0 = cy + (ch - (rd + 16)) / 2; // block (ring+label) centered below header
     if (y0 < cy) y0 = cy;
 
-    draw_ring_gauge(ctx, GRect(col_l, y0, rd, rd),
-                    s_hr_pct, 3, COLOR_GAUGE_BG, hr_col);
-    draw_ring_gauge(ctx, GRect(col_r, y0, rd, rd),
-                    s_steps_pct, 3, COLOR_GAUGE_BG, watchface_get_color_label());
-
-    // Values centered inside rings (leading-compensated), labels below
-    graphics_context_set_text_color(ctx, hr_val_col);
-    graphics_draw_text(ctx, s_hr_buf, fonts_get(FONT_SIZE_HEADER),
-                       GRect(col_l, y0 + (rd - 14) / 2 - FONT_LEADING_14,
-                             rd, 14 + FONT_LEADING_14),
-                       GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentCenter, NULL);
-    graphics_draw_text(ctx, s_steps_buf, fonts_get(FONT_SIZE_HEADER),
-                       GRect(col_r, y0 + (rd - 14) / 2 - FONT_LEADING_14,
-                             rd, 14 + FONT_LEADING_14),
-                       GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentCenter, NULL);
-
-    int lbl_y = y0 + rd + 2;
-    graphics_context_set_text_color(ctx, watchface_get_color_label());
-    graphics_draw_text(ctx, "BPM", fonts_get(FONT_SIZE_HEADER),
-                       GRect(cx, lbl_y - FONT_LEADING_14, cw / 2,
-                             14 + FONT_LEADING_14),
-                       GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentCenter, NULL);
-    graphics_draw_text(ctx, "STEPS", fonts_get(FONT_SIZE_HEADER),
-                       GRect(cx + cw / 2, lbl_y - FONT_LEADING_14, cw / 2,
-                             14 + FONT_LEADING_14),
-                       GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentCenter, NULL);
-  } else {
-    // Ring box: square, centered horizontally, sized to available height
-    int ring_d = ch - 22;             // leave room for values below
-    if (ring_d > cw) ring_d = cw;
-    if (ring_d < 24) ring_d = 24;
-    int ring_x = cx + (cw - ring_d) / 2;
-    GRect ring_box = GRect(ring_x, cy, ring_d, ring_d);
-
-    draw_dual_ring(ctx, ring_box, s_hr_pct, hr_col, s_steps_pct,
-                   watchface_get_color_label());
-
-    // BPM centered in ring (leading-compensated), labels+values below
-    GRect hr_c = GRect(cx, cy + ring_d / 2 - 12 - FONT_LEADING_18, cw,
-                       20 + FONT_LEADING_18);
-    graphics_context_set_text_color(ctx, hr_val_col);
-    graphics_draw_text(ctx, s_hr_buf, fonts_get(FONT_SIZE_VALUE), hr_c,
-                       GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentCenter, NULL);
-    int ty = cy + ring_d + 2;
-    graphics_context_set_text_color(ctx, watchface_get_color_label());
-    GRect hr_lbl = GRect(cx, ty - FONT_LEADING_14, cw / 2, 16 + FONT_LEADING_14);
-    graphics_draw_text(ctx, "BPM", fonts_get(FONT_SIZE_HEADER), hr_lbl,
-                       GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
-    char steps_lbl[20];
-    snprintf(steps_lbl, sizeof(steps_lbl), "STEPS %s", s_steps_buf);
-    GRect st_lbl = GRect(cx + cw / 2, ty - FONT_LEADING_14, cw / 2,
-                         16 + FONT_LEADING_14);
-    graphics_draw_text(ctx, steps_lbl, fonts_get(FONT_SIZE_HEADER), st_lbl,
-                       GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentRight, NULL);
+    prv_draw_ring_cell(ctx, col_l, y0, rd, cw / 2, &s_slots[0]);
+    prv_draw_ring_cell(ctx, col_r, y0, rd, cw / 2, &s_slots[1]);
   }
 }
 
@@ -161,4 +198,3 @@ void medical_panel_destroy(void) {
     s_layer = NULL;
   }
 }
-

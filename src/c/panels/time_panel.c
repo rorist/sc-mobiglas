@@ -42,20 +42,23 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // Flint (144px wide): logo + time can't fit side by side — logo not
   // rendered, time uses the 48px font at full content width
   const bool show_logo = false;
+  const FontSize time_font = FONT_SIZE_TIME_BIG;
   const int time_rect_h = 40;  // 48px glyphs are 32px tall; 40 keeps the date visible
 #else
   const bool show_logo = (s_logo_bmp != NULL);
-  const int time_rect_h = s_logo_bmp ? 52 : 56;
+  // Font grows with panel height when no logo: 72px needs a 89px block
+  const FontSize time_font = show_logo ? FONT_SIZE_TIME
+      : (content.size.h >= 90 ? FONT_SIZE_TIME_HUGE : FONT_SIZE_TIME_BIG);
+  const int time_rect_h = show_logo ? 52
+                        : (time_font == FONT_SIZE_TIME_HUGE) ? 68 : 56;
 #endif
   int block_h = time_rect_h + 3 + 18;
   int y_offset = content.origin.y + (content.size.h - block_h) / 2;
   if (y_offset < content.origin.y) y_offset = content.origin.y;
 
-  // Dynamic time font: 60px without logo (186px zone fits any time),
-  // 50px with logo (116px zone — worst time "04:44" = 114.6px, fits).
-  // Rajdhani is variable-width; larger + logo would truncate wide times.
-  const int l_time = show_logo ? FONT_LEADING_50 : FONT_LEADING_60;
-  const FontSize time_font = show_logo ? FONT_SIZE_TIME : FONT_SIZE_TIME_BIG;
+  // Dynamic leading: matches the selected time font (50/60/72px)
+  const int l_time = (time_font == FONT_SIZE_TIME_HUGE) ? FONT_LEADING_72
+                     : show_logo ? FONT_LEADING_50 : FONT_LEADING_60;
   const int l18 = FONT_LEADING_18;
 
   // Fixed 64px logo zone at the right edge — time AND date keep the
