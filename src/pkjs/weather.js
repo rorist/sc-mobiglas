@@ -56,26 +56,27 @@ function fetch_weather(lat, lon) {
       }
       var daily = data.daily || {};
 
+      var keys = require('message_keys');
       var payload = {};
-      payload[0] = Math.round(cur.temperature_2m);   // KEY_TEMP
-      payload[1] = wmo_label(cur.weather_code);      // KEY_WEATHER
+      payload[keys.KEY_TEMP] = Math.round(cur.temperature_2m);
+      payload[keys.KEY_WEATHER] = wmo_label(cur.weather_code);
       if (typeof cur.wind_speed_10m === 'number') {
-        payload[10] = Math.round(cur.wind_speed_10m); // KEY_WIND_SPEED
+        payload[keys.KEY_WIND_SPEED] = Math.round(cur.wind_speed_10m);
       }
       if (typeof cur.wind_direction_10m === 'number') {
-        payload[11] = Math.round(cur.wind_direction_10m); // KEY_WIND_DIR
+        payload[keys.KEY_WIND_DIR] = Math.round(cur.wind_direction_10m);
       }
       if (typeof cur.relative_humidity_2m === 'number') {
-        payload[12] = Math.round(cur.relative_humidity_2m); // KEY_HUMIDITY
+        payload[keys.KEY_HUMIDITY] = Math.round(cur.relative_humidity_2m);
       }
       if (typeof cur.uv_index === 'number') {
-        payload[13] = Math.round(cur.uv_index);      // KEY_UV
+        payload[keys.KEY_UV] = Math.round(cur.uv_index);
       }
       if (daily.sunrise && daily.sunrise[0]) {
-        payload[14] = hhmm(daily.sunrise[0]);        // KEY_SUNRISE
+        payload[keys.KEY_SUNRISE] = hhmm(daily.sunrise[0]);
       }
       if (daily.sunset && daily.sunset[0]) {
-        payload[15] = hhmm(daily.sunset[0]);         // KEY_SUNSET
+        payload[keys.KEY_SUNSET] = hhmm(daily.sunset[0]);
       }
       send_weather(payload);
     } catch (e) {

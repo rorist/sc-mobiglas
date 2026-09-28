@@ -81,70 +81,132 @@ static int prv_cond_index(const char *c) {
   return 6;
 }
 
+// Draw one metric cell (icon + text) inside [cell_x, cell_w] on line y_line.
+// Full-width metrics get the whole row; half metrics get their half.
+static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
+                            int y_line) {
+  const int l14 = FONT_LEADING_14;
+  switch (metric) {
+    case 0:  // Weather: icon + condition (left) + temperature (right)
+      draw_weather_icon(ctx, GPoint(cell_x, y_line + 2),
+                        prv_cond_index(s_cond_buf));
+      graphics_draw_text(ctx, s_cond_buf, fonts_get(FONT_SIZE_HEADER),
+                         GRect(cell_x + 10, y_line - l14, cell_w - 10 - 32,
+                               14 + l14),
+                         GTextOverflowModeTrailingEllipsis,
+                         GTextAlignmentLeft, NULL);
+      graphics_draw_text(ctx, s_temp_buf, fonts_get(FONT_SIZE_HEADER),
+                         GRect(cell_x + cell_w - 32, y_line - l14, 32,
+                               14 + l14),
+                         GTextOverflowModeTrailingEllipsis,
+                         GTextAlignmentRight, NULL);
+      break;
+    case 1:  // Wind
+      draw_wind_icon(ctx, GPoint(cell_x, y_line + 3));
+      graphics_draw_text(ctx, s_wind_buf, fonts_get(FONT_SIZE_HEADER),
+                         GRect(cell_x + 10, y_line - l14, cell_w - 10, 14 + l14),
+                         GTextOverflowModeTrailingEllipsis,
+                         GTextAlignmentLeft, NULL);
+      break;
+    case 2:  // Humidity
+      draw_drop_icon(ctx, GPoint(cell_x, y_line + 3));
+      graphics_draw_text(ctx, s_hum_buf, fonts_get(FONT_SIZE_HEADER),
+                         GRect(cell_x + 10, y_line - l14, cell_w - 10, 14 + l14),
+                         GTextOverflowModeTrailingEllipsis,
+                         GTextAlignmentLeft, NULL);
+      break;
+    case 3:  // UV
+      draw_uv_icon(ctx, GPoint(cell_x, y_line + 3));
+      graphics_draw_text(ctx, s_uv_buf, fonts_get(FONT_SIZE_HEADER),
+                         GRect(cell_x + 10, y_line - l14, cell_w - 10, 14 + l14),
+                         GTextOverflowModeTrailingEllipsis,
+                         GTextAlignmentLeft, NULL);
+      break;
+    case 4:  // Sunrise
+      draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), false);
+      graphics_draw_text(ctx, s_sun_rise, fonts_get(FONT_SIZE_HEADER),
+                         GRect(cell_x + 10, y_line - l14, cell_w - 10, 14 + l14),
+                         GTextOverflowModeTrailingEllipsis,
+                         GTextAlignmentLeft, NULL);
+      break;
+    case 5:  // Sunset
+      draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), true);
+      graphics_draw_text(ctx, s_sun_set, fonts_get(FONT_SIZE_HEADER),
+                         GRect(cell_x + 10, y_line - l14, cell_w - 10, 14 + l14),
+                         GTextOverflowModeTrailingEllipsis,
+                         GTextAlignmentLeft, NULL);
+      break;
+  }
+}
+
+// Metrics: 0 WEATHER (full), 1 WIND (full), 2 HUM (half), 3 UV (half),
+// 4 SUNRISE (half), 5 SUNSET (half). Full metrics take their own line; two
+// consecutive halves share a line; a lone trailing half is centered.
 static void prv_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
   panel_draw_header_full(ctx, bounds, "ENVIRON", COLOR_PRIMARY);
 
   GRect content = panel_content_rect(bounds);
-  int x = content.origin.x;
-  int y = content.origin.y;
-  int w = content.size.w;
-  int ch = content.size.h;
+  const int x = content.origin.x;
+  const int y = content.origin.y;
+  const int w = content.size.w;
+  const int ch = content.size.h;
+  const uint32_t mask = watchface_get_env_metrics();
 
   // All ENVIRON lines are measured values, not labels
   graphics_context_set_text_color(ctx, watchface_get_color_value());
 
+  // Collect active metrics (fixed order)
+  int act[6];
+  int n = 0;
+  for (int i = 0; i < 6; i++) {
+    if (mask & (1u << i)) act[n++] = i;
+  }
+
+  // Pack into rows: full = own row; halves pair up; lone trailing half centered
+  const int half = w / 2;
+  int rows[6][2];            // {metric, cell_x}; metric -1 = none
+  int row_w[6];              // cell width for metric 0 of the row
+  int row_count = 0;
+  for (int i = 0; i < n; ) {
+    if (act[i] <= 1) {                    // full-width metric
+      rows[row_count][0] = act[i];
+      rows[row_count][1] = -1;
+      row_w[row_count] = w;
+      row_count++;
+      i++;
+    } else {                              // half metric
+      rows[row_count][0] = act[i];
+      rows[row_count][1] = -1;
+      row_w[row_count] = half;
+      if (i + 1 < n && act[i + 1] > 1) {  // pair with the next half
+        rows[row_count][1] = act[i + 1];
+        i += 2;
+      } else {
+        i++;                              // lone trailing half — centered
+      }
+      row_count++;
+    }
+  }
+
+  // Vertical block: one 14px line per row, 1px gaps, centered in content
   const int line_h = 14;
   const int gap = 1;
-  const int block_h = 4 * line_h + 3 * gap;
+  const int block_h = row_count * line_h + (row_count - 1) * gap;
   int y0 = y + (ch - block_h) / 2;
   if (y0 < y) y0 = y;
 
-  const int l14 = FONT_LEADING_14;
-
-  // Line 1: icon + condition (left) + temperature (right)
-  draw_weather_icon(ctx, GPoint(x, y0 + 2), prv_cond_index(s_cond_buf));
-  GRect cond_rect = GRect(x + 10, y0 - l14, w - 10 - 32, line_h + l14);
-  graphics_draw_text(ctx, s_cond_buf, fonts_get(FONT_SIZE_HEADER), cond_rect,
-                     GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
-  GRect temp_rect = GRect(x + w - 32, y0 - l14, 32, line_h + l14);
-  graphics_draw_text(ctx, s_temp_buf, fonts_get(FONT_SIZE_HEADER), temp_rect,
-                     GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentRight, NULL);
-
-  // Line 2: wind icon + wind text
-  draw_wind_icon(ctx, GPoint(x, y0 + 15 + 3));
-  GRect wind_rect = GRect(x + 10, y0 + 15 - l14, w - 10, line_h + l14);
-  graphics_draw_text(ctx, s_wind_buf, fonts_get(FONT_SIZE_HEADER), wind_rect,
-                     GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
-
-  // Line 3: humidity (left half) + UV (right half), mirror of line 4
-  int half = w / 2;
-  draw_drop_icon(ctx, GPoint(x, y0 + 30 + 3));
-  GRect hum_rect = GRect(x + 10, y0 + 30 - l14, half - 10, line_h + l14);
-  graphics_draw_text(ctx, s_hum_buf, fonts_get(FONT_SIZE_HEADER), hum_rect,
-                     GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
-  draw_uv_icon(ctx, GPoint(x + half, y0 + 30 + 3));
-  GRect uv_rect = GRect(x + half + 10, y0 + 30 - l14, w - half - 10, line_h + l14);
-  graphics_draw_text(ctx, s_uv_buf, fonts_get(FONT_SIZE_HEADER), uv_rect,
-                     GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
-
-  // Line 4: sun icons + times — rise group left, set group right
-  const int y4 = y0 + 45;
-  draw_sun_icon(ctx, GPoint(x, y4 + 3), false);
-  GRect rise_rect = GRect(x + 10, y4 - l14, half - 10, line_h + l14);
-  graphics_draw_text(ctx, s_sun_rise, fonts_get(FONT_SIZE_HEADER), rise_rect,
-                     GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
-  draw_sun_icon(ctx, GPoint(x + half, y4 + 3), true);
-  GRect set_rect = GRect(x + half + 10, y4 - l14, w - half - 10, line_h + l14);
-  graphics_draw_text(ctx, s_sun_set, fonts_get(FONT_SIZE_HEADER), set_rect,
-                     GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+  for (int r = 0; r < row_count; r++) {
+    int y_line = y0 + r * (line_h + gap);
+    int cell_x = x;
+    if (rows[r][0] > 1 && rows[r][1] < 0) {
+      cell_x = x + (w - half) / 2;        // lone half — centered
+    }
+    prv_draw_metric(ctx, rows[r][0], cell_x, row_w[r], y_line);
+    if (rows[r][1] >= 0) {
+      prv_draw_metric(ctx, rows[r][1], x + half, w - half, y_line);
+    }
+  }
 }
 
 Layer *environ_panel_create(GRect bounds) {

@@ -12,6 +12,9 @@ static Layer *s_panel_layers[PANEL_COUNT];
 static uint8_t s_config = CONFIG_DEFAULT;
 static uint8_t s_logo = 0;
 static bool s_show_date = true;
+static uint32_t s_med_mask = 0x03;   // BPM + STEPS
+static uint32_t s_env_mask = 0x3F;   // all 6
+static uint32_t s_sys_mask = 0x03;   // BAT + COM
 static GRect s_screen_bounds;
 
 // Configurable text colors
@@ -34,6 +37,7 @@ static void prv_root_update_proc(Layer *layer, GContext *ctx) {
   graphics_draw_line(ctx, GPoint(bounds.origin.x, bounds.origin.y + bounds.size.h - 3),
                       GPoint(bounds.origin.x + bounds.size.w - 1,
                              bounds.origin.y + bounds.size.h - 3));
+
 }
 
 // ---------------------------------------------------------------------------
@@ -88,16 +92,9 @@ void watchface_create(Window *window) {
   s_config = storage_load_config();
   s_logo = storage_load_logo();
   s_show_date = storage_load_show_date() != 0;
-  // TEMP: layout harness — force config/logo for capture. Remove after validation.
-#define LAYOUT_TEST_OVERRIDE
-#if defined(LAYOUT_TEST_OVERRIDE)
-#define LAYOUT_TEST_CONFIG CONFIG_DEFAULT   /* 0 = time only; CONFIG_DEFAULT = all panels */
-#define LAYOUT_TEST_NOLOGO 1
-  s_config = (uint8_t)(LAYOUT_TEST_CONFIG);
-#if LAYOUT_TEST_NOLOGO
-  s_logo = 0;
-#endif
-#endif
+  s_med_mask = storage_load_med_metrics();
+  s_env_mask = storage_load_env_metrics();
+  s_sys_mask = storage_load_sys_metrics();
   s_color_time = storage_load_color_time();
   s_color_value = storage_load_color_value();
   s_color_label = storage_load_color_label();
@@ -171,6 +168,44 @@ void watchface_set_show_date(bool show) {
   if (show == s_show_date) return;
   s_show_date = show;
   time_panel_refresh();
+}
+
+// ---------------------------------------------------------------------------
+// Per-panel metrics masks
+// ---------------------------------------------------------------------------
+
+uint32_t watchface_get_med_metrics(void) {
+  return s_med_mask;
+}
+
+uint32_t watchface_get_env_metrics(void) {
+  return s_env_mask;
+}
+
+uint32_t watchface_get_sys_metrics(void) {
+  return s_sys_mask;
+}
+
+static void prv_mark_panel(int id) {
+  if (s_panel_layers[id]) layer_mark_dirty(s_panel_layers[id]);
+}
+
+void watchface_set_med_metrics(uint32_t mask) {
+  if (mask == s_med_mask) return;
+  s_med_mask = mask;
+  prv_mark_panel(PANEL_MEDICAL);
+}
+
+void watchface_set_env_metrics(uint32_t mask) {
+  if (mask == s_env_mask) return;
+  s_env_mask = mask;
+  prv_mark_panel(PANEL_ENVIRON);
+}
+
+void watchface_set_sys_metrics(uint32_t mask) {
+  if (mask == s_sys_mask) return;
+  s_sys_mask = mask;
+  prv_mark_panel(PANEL_SYSTEMS);
 }
 
 // ---------------------------------------------------------------------------

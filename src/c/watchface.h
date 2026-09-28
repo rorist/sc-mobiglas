@@ -91,6 +91,18 @@ void watchface_set_logo(uint8_t logo);
 bool watchface_get_show_date(void);
 void watchface_set_show_date(bool show);
 
+// Per-panel metrics masks (bit i = metric i enabled, fixed C-side order)
+// MED bits: 0 BPM, 1 STEPS, 2 SLEEP, 3 KCAL, 4 DIST, 5 ACTIVE, 6 RKCAL, 7 DSLEEP
+// ENV bits: 0 WEATHER, 1 WIND, 2 HUM, 3 UV, 4 SUNRISE, 5 SUNSET
+// SYS bits: 0 BAT, 1 COM
+uint32_t watchface_get_med_metrics(void);
+uint32_t watchface_get_env_metrics(void);
+uint32_t watchface_get_sys_metrics(void);
+void watchface_set_med_metrics(uint32_t mask);
+void watchface_set_env_metrics(uint32_t mask);
+void watchface_set_sys_metrics(uint32_t mask);
+
+
 // Configurable text colors (runtime)
 GColor watchface_get_color_time(void);
 GColor watchface_get_color_value(void);

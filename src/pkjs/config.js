@@ -58,16 +58,40 @@ module.exports = [
         "defaultValue": true
       },
       {
+        "type": "checkboxgroup",
+        "messageKey": "KEY_MED_METRICS",
+        "label": "Medical metrics",
+        "defaultValue": [true, true, false, false, false, false, false, false],
+        "options": [
+          "Heart rate", "Steps", "Sleep", "Calories",
+          "Distance", "Active time", "Resting kcal", "Deep sleep"
+        ]
+      },
+      {
         "type": "toggle",
         "messageKey": "KEY_SHOW_ENVIRON",
         "label": "Environ panel",
         "defaultValue": true
       },
       {
+        "type": "checkboxgroup",
+        "messageKey": "KEY_ENV_METRICS",
+        "label": "Environ metrics",
+        "defaultValue": [true, true, true, true, true, true],
+        "options": ["Weather", "Wind", "Humidity", "UV", "Sunrise", "Sunset"]
+      },
+      {
         "type": "toggle",
         "messageKey": "KEY_SHOW_SYSTEMS",
         "label": "Systems panel",
         "defaultValue": true
+      },
+      {
+        "type": "checkboxgroup",
+        "messageKey": "KEY_SYS_METRICS",
+        "label": "Systems metrics",
+        "defaultValue": [true, true],
+        "options": ["Battery", "Bluetooth"]
       }
     ]
   },

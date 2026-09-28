@@ -371,7 +371,9 @@ find, sed or ls for file operations unless Serena cannot do the task.
 1. Before creating any new function: `find_symbol` (does it exist?) + `find_referencing_symbols` (who uses what I'm touching?)
 2. Before editing a file: `get_symbols_overview` + `read_file`
 3. Never duplicate logic already in `panel.h` or `draw_utils.c`
-4. Bash is reserved for build/run commands (`pebble build`, `pebble install`, `pebble logs`)
+4. Bash is reserved for build/run commands (`pebble build`, `pebble install`, `pebble logs`);
+   `pebble build` must ALWAYS run alone — never piped to grep/tail/sed (inspection commands
+   run separately)
 5. Beware of `replace_content` in regex mode inserting literal `\n` — prefer
    `replace_symbol_body` for whole functions
 
@@ -389,6 +391,9 @@ pypkjs                              # local PKJS dev server
 ```
 
 Build must pass with **0 warnings** from project code.
+
+> **Always run `pebble` commands alone** — never pipe it (`| grep`, `| tail`, `2>&1`).
+> Run bundle inspection (`grep -c ... build/pebble-js-app.js`, etc.) in separate commands.
 
 > **Visual validation:** after any visual change, run `pebble screenshot --emulator emery`
 > and inspect the PNG to validate the rendering yourself before considering the task done.

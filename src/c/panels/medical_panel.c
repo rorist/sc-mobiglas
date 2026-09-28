@@ -2,13 +2,18 @@
 #include "panel.h"
 #include "../watchface.h"
 
-#define MED_SLOT_COUNT 4
-#define MED_SLEEP_GOAL_S (8 * 3600)   // 8h sleep goal
+#define MED_METRIC_COUNT 8
+#define MED_SLEEP_GOAL_S (8 * 3600)        // 8h sleep goal
+#define MED_DEEP_GOAL_S (2 * 3600)         // 2h deep sleep goal
+#define MED_DIST_GOAL_FALLBACK 5000        // meters
+#define MED_ACTIVE_GOAL_FALLBACK 3600      // seconds (1h)
+#define MED_RKCAL_GOAL_FALLBACK 1500
 #define MED_KCAL_GOAL_FALLBACK 500
 
 // One metric slot: label + formatted value + gauge percent + colors.
-// Full mode renders all 4 slots as one row of rings; compact mode renders
-// slots 0-1 only. Future configurable metrics (#13) plug in here.
+// Full mode renders the first 4 active metrics as one row of rings; compact
+// mode renders the first 2. Which metrics are active comes from the user's
+// metrics mask (watchface_get_med_metrics), in this fixed order.
 typedef struct {
   const char *label;
   char value[12];
@@ -17,19 +22,40 @@ typedef struct {
   GColor value_col;
 } MedSlot;
 
-static Layer *s_layer;
-static MedSlot s_slots[MED_SLOT_COUNT];
+static void prv_fill_metric(int idx);
 
-static void prv_fill_hr(void) {
-  MedSlot *s = &s_slots[0];
+static Layer *s_layer;
+static MedSlot s_slots[MED_METRIC_COUNT];
+
+static void prv_clamp_pct(MedSlot *s, int pct) {
+  if (pct < 0) pct = 0;
+  if (pct > 100) pct = 100;
+  s->pct = pct;
+}
+
+// Averaged daily goal for a metric, or fallback if unavailable.
+static HealthValue prv_goal(HealthMetric metric, HealthValue fallback) {
+  time_t now = time(NULL);
+  time_t start = time_start_of_today();
+  if (health_service_metric_averaged_accessible(metric, start, now,
+        HealthServiceTimeScopeDaily)
+        != HealthServiceAccessibilityMaskAvailable) {
+    return fallback;
+  }
+  HealthValue goal = health_service_sum_averaged(metric, start, now,
+                                                 HealthServiceTimeScopeDaily);
+  return (goal > 0) ? goal : fallback;
+}
+
+static void prv_fill_hr(int idx) {
+  MedSlot *s = &s_slots[idx];
   s->label = "BPM";
   HealthValue hr = health_service_peek_current_value(HealthMetricHeartRateBPM);
   int bpm = (int)hr;
   bool normal = (bpm >= 50 && bpm <= 100);
   if (bpm > 0) {
     snprintf(s->value, sizeof(s->value), "%d", bpm);
-    int pct = (bpm - 40) * 100 / (180 - 40);
-    s->pct = (pct < 0) ? 0 : (pct > 100 ? 100 : pct);
+    prv_clamp_pct(s, (bpm - 40) * 100 / (180 - 40));
   } else {
     snprintf(s->value, sizeof(s->value), "---");
     s->pct = 0;
@@ -39,43 +65,14 @@ static void prv_fill_hr(void) {
                         : watchface_get_color_warn();
 }
 
-static void prv_fill_steps(void) {
-  MedSlot *s = &s_slots[1];
-  s->label = "STEPS";
-  HealthValue steps = health_service_sum_today(HealthMetricStepCount);
-  if (steps > 0) {
-    snprintf(s->value, sizeof(s->value), "%d", (int)steps);
-  } else {
-    snprintf(s->value, sizeof(s->value), "---");
-  }
-
-  // Goal: user's daily average, fallback 10000
-  time_t now = time(NULL);
-  time_t start = time_start_of_today();
-  HealthValue goal = 0;
-  if (health_service_metric_averaged_accessible(HealthMetricStepCount, start,
-        now, HealthServiceTimeScopeDaily)
-        == HealthServiceAccessibilityMaskAvailable) {
-    goal = health_service_sum_averaged(HealthMetricStepCount, start, now,
-                                       HealthServiceTimeScopeDaily);
-  }
-  if (goal <= 0) goal = 10000;
-  int pct = (steps > 0) ? ((int)steps * 100 / (int)goal) : 0;
-  s->pct = (pct < 0) ? 0 : (pct > 100 ? 100 : pct);
-  s->fill = watchface_get_color_label();
-  s->value_col = watchface_get_color_value();
-}
-
-static void prv_fill_sleep(void) {
-  MedSlot *s = &s_slots[2];
-  s->label = "SLEEP";
-  HealthValue secs = health_service_sum_today(HealthMetricSleepSeconds);
-  if (secs > 0) {
-    int h = (int)secs / 3600;
-    int m = ((int)secs % 3600) / 60;
-    snprintf(s->value, sizeof(s->value), "%dh%02d", h, m);
-    int pct = (int)secs * 100 / MED_SLEEP_GOAL_S;
-    s->pct = (pct > 100) ? 100 : pct;
+static void prv_fill_sum_int(int idx, const char *label, HealthMetric metric,
+                             HealthValue goal_fallback) {
+  MedSlot *s = &s_slots[idx];
+  s->label = label;
+  HealthValue v = health_service_sum_today(metric);
+  if (v > 0) {
+    snprintf(s->value, sizeof(s->value), "%d", (int)v);
+    prv_clamp_pct(s, (int)v * 100 / (int)prv_goal(metric, goal_fallback));
   } else {
     snprintf(s->value, sizeof(s->value), "---");
     s->pct = 0;
@@ -84,38 +81,79 @@ static void prv_fill_sleep(void) {
   s->value_col = watchface_get_color_value();
 }
 
-static void prv_fill_kcal(void) {
-  MedSlot *s = &s_slots[3];
-  s->label = "KCAL";
-  HealthValue kcal = health_service_sum_today(HealthMetricActiveKCalories);
-  if (kcal > 0) {
-    snprintf(s->value, sizeof(s->value), "%d", (int)kcal);
+static void prv_fill_duration(int idx, const char *label, HealthMetric metric,
+                              int goal_s) {
+  MedSlot *s = &s_slots[idx];
+  s->label = label;
+  HealthValue secs = health_service_sum_today(metric);
+  if (secs > 0) {
+    int h = (int)secs / 3600;
+    int m = ((int)secs % 3600) / 60;
+    snprintf(s->value, sizeof(s->value), "%dh%02d", h, m);
+    prv_clamp_pct(s, (int)secs * 100 / goal_s);
   } else {
     snprintf(s->value, sizeof(s->value), "---");
+    s->pct = 0;
   }
-
-  // Goal: user's daily average, fallback 500
-  time_t now = time(NULL);
-  time_t start = time_start_of_today();
-  HealthValue goal = 0;
-  if (health_service_metric_averaged_accessible(HealthMetricActiveKCalories,
-        start, now, HealthServiceTimeScopeDaily)
-        == HealthServiceAccessibilityMaskAvailable) {
-    goal = health_service_sum_averaged(HealthMetricActiveKCalories, start, now,
-                                       HealthServiceTimeScopeDaily);
-  }
-  if (goal <= 0) goal = MED_KCAL_GOAL_FALLBACK;
-  int pct = (kcal > 0) ? ((int)kcal * 100 / (int)goal) : 0;
-  s->pct = (pct < 0) ? 0 : (pct > 100 ? 100 : pct);
   s->fill = watchface_get_color_label();
   s->value_col = watchface_get_color_value();
 }
 
+static void prv_fill_metric(int idx) {
+  switch (idx) {
+    case 0:
+      prv_fill_hr(idx);
+      break;
+    case 1:  // Steps — goal: daily average, fallback 10000
+      prv_fill_sum_int(idx, "STEPS", HealthMetricStepCount, 10000);
+      break;
+    case 2:  // Sleep
+      prv_fill_duration(idx, "SLEEP", HealthMetricSleepSeconds,
+                        MED_SLEEP_GOAL_S);
+      break;
+    case 3:  // Active kcal — goal: daily average, fallback 500
+      prv_fill_sum_int(idx, "KCAL", HealthMetricActiveKCalories,
+                       MED_KCAL_GOAL_FALLBACK);
+      break;
+    case 4:  // Distance (meters) — value in km
+      {
+        MedSlot *s = &s_slots[idx];
+        s->label = "KM";
+        HealthValue meters = health_service_sum_today(
+            HealthMetricWalkedDistanceMeters);
+        if (meters > 0) {
+          snprintf(s->value, sizeof(s->value), "%d.%dkm",
+                   (int)meters / 1000, ((int)meters % 1000) / 100);
+          prv_clamp_pct(s, (int)meters * 100 /
+                            (int)prv_goal(HealthMetricWalkedDistanceMeters,
+                                          MED_DIST_GOAL_FALLBACK));
+        } else {
+          snprintf(s->value, sizeof(s->value), "---");
+          s->pct = 0;
+        }
+        s->fill = watchface_get_color_label();
+        s->value_col = watchface_get_color_value();
+      }
+      break;
+    case 5:  // Active time — goal fallback 1h
+      prv_fill_duration(idx, "ACT", HealthMetricActiveSeconds,
+                        MED_ACTIVE_GOAL_FALLBACK);
+      break;
+    case 6:  // Resting kcal
+      prv_fill_sum_int(idx, "RKCAL", HealthMetricRestingKCalories,
+                       MED_RKCAL_GOAL_FALLBACK);
+      break;
+    case 7:  // Deep sleep
+      prv_fill_duration(idx, "DEEP", HealthMetricSleepRestfulSeconds,
+                        MED_DEEP_GOAL_S);
+      break;
+  }
+}
+
 static void prv_refresh_health(void) {
-  prv_fill_hr();
-  prv_fill_steps();
-  prv_fill_sleep();
-  prv_fill_kcal();
+  for (int i = 0; i < MED_METRIC_COUNT; i++) {
+    prv_fill_metric(i);
+  }
 }
 
 // Draw one ring cell: ring gauge with value centered inside, label below.
@@ -139,6 +177,15 @@ static void prv_draw_ring_cell(GContext *ctx, int x, int y, int rd,
                      GTextAlignmentCenter, NULL);
 }
 
+// Collect active metric indices (fixed order, filtered by the user's mask).
+static int prv_active_slots(uint32_t mask, int max_count, int *out_idx) {
+  int n = 0;
+  for (int i = 0; i < MED_METRIC_COUNT && n < max_count; i++) {
+    if (mask & (1u << i)) out_idx[n++] = i;
+  }
+  return n;
+}
+
 static void prv_update_proc(Layer *layer, GContext *ctx) {
   // Re-read health at draw time (cheap cached reads, no sensor wakeups):
   // the panel is marked dirty every minute by watchface_tick, so values
@@ -153,10 +200,14 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   int cy = content.origin.y;
   int cw = content.size.w;
   int ch = content.size.h;
+  uint32_t mask = watchface_get_med_metrics();
 
+  int idx[MED_METRIC_COUNT];
   if (cw >= 120) {
-    // Full mode: one row of 4 ring gauges (HR, STEPS, SLEEP, KCAL)
-    const int cell_w = cw / MED_SLOT_COUNT;
+    // Full mode: one row of up to 4 active ring gauges
+    int n = prv_active_slots(mask, 4, idx);
+    if (n == 0) return;
+    const int cell_w = cw / n;
     int rd = ch - 17;
     int rd_max = cell_w - 6;
     if (rd > rd_max) rd = rd_max;
@@ -165,23 +216,27 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     int y0 = cy + (ch - (rd + 16)) / 2;
     if (y0 < cy) y0 = cy;
 
-    for (int i = 0; i < MED_SLOT_COUNT; i++) {
+    for (int i = 0; i < n; i++) {
       int colx = cx + i * cell_w + (cell_w - rd) / 2;
-      prv_draw_ring_cell(ctx, colx, y0, rd, cell_w, &s_slots[i]);
+      prv_draw_ring_cell(ctx, colx, y0, rd, cell_w, &s_slots[idx[i]]);
     }
   } else {
-    // Compact mode: two side-by-side ring gauges (HR, STEPS)
+    // Compact mode: two side-by-side ring gauges (first 2 active)
+    int n = prv_active_slots(mask, 2, idx);
+    if (n == 0) return;
     int rd = ch - 17;                   // ring + 2px gap + 14px label
     int rd_max = cw / 2 - 8;            // fit within own column
     if (rd > rd_max) rd = rd_max;
     if (rd < 20) rd = 20;
     int col_l = cx + cw / 4 - rd / 2;
     int col_r = cx + 3 * cw / 4 - rd / 2;
-    int y0 = cy + (ch - (rd + 16)) / 2; // block (ring+label) centered below header
+    int y0 = cy + (ch - (rd + 16)) / 2; // block centered below header
     if (y0 < cy) y0 = cy;
 
-    prv_draw_ring_cell(ctx, col_l, y0, rd, cw / 2, &s_slots[0]);
-    prv_draw_ring_cell(ctx, col_r, y0, rd, cw / 2, &s_slots[1]);
+    prv_draw_ring_cell(ctx, col_l, y0, rd, cw / 2, &s_slots[idx[0]]);
+    if (n > 1) {
+      prv_draw_ring_cell(ctx, col_r, y0, rd, cw / 2, &s_slots[idx[1]]);
+    }
   }
 }
 

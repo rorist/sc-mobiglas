@@ -133,6 +133,53 @@ static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
     storage_save_show_date(show ? 1 : 0);
   }
 
+  // Per-panel metrics masks — Clay "checkboxgroup" sends one Int32 (0/1) per
+  // item at consecutive keys (KEY_X_METRICS + i)
+  uint32_t med_mask = watchface_get_med_metrics();
+  uint32_t new_med = 0;
+  for (uint32_t i = 0; i < 8; i++) {
+    Tuple *mt = dict_find(iter, MESSAGE_KEY_KEY_MED_METRICS + i);
+    if (mt) {
+      if (mt->value->int32) new_med |= (1u << i);
+    } else {
+      new_med |= (med_mask & (1u << i));  // absent item keeps old state
+    }
+  }
+  if (new_med != med_mask) {
+    watchface_set_med_metrics(new_med);
+    storage_save_med_metrics(new_med);
+  }
+
+  uint32_t env_mask = watchface_get_env_metrics();
+  uint32_t new_env = 0;
+  for (uint32_t i = 0; i < 6; i++) {
+    Tuple *et = dict_find(iter, MESSAGE_KEY_KEY_ENV_METRICS + i);
+    if (et) {
+      if (et->value->int32) new_env |= (1u << i);
+    } else {
+      new_env |= (env_mask & (1u << i));
+    }
+  }
+  if (new_env != env_mask) {
+    watchface_set_env_metrics(new_env);
+    storage_save_env_metrics(new_env);
+  }
+
+  uint32_t sys_mask = watchface_get_sys_metrics();
+  uint32_t new_sys = 0;
+  for (uint32_t i = 0; i < 2; i++) {
+    Tuple *st = dict_find(iter, MESSAGE_KEY_KEY_SYS_METRICS + i);
+    if (st) {
+      if (st->value->int32) new_sys |= (1u << i);
+    } else {
+      new_sys |= (sys_mask & (1u << i));
+    }
+  }
+  if (new_sys != sys_mask) {
+    watchface_set_sys_metrics(new_sys);
+    storage_save_sys_metrics(new_sys);
+  }
+
   // Config — Clay sends each toggle as Int32 (1/0); rebuild the bitmask
   uint8_t config = watchface_get_config();
   uint8_t new_config = config;
@@ -170,7 +217,9 @@ void appmessage_init(void) {
   app_message_register_inbox_dropped(prv_inbox_dropped);
   app_message_register_outbox_sent(prv_outbox_sent);
   app_message_register_outbox_failed(prv_outbox_failed);
-  AppMessageResult res = app_message_open(256, 256);
+  // Inbox 512: full Clay payload (toggle metrics + colors) can exceed 256B;
+  // outbox 64 is enough for the 1-byte weather request.
+  AppMessageResult res = app_message_open(512, 64);
   if (res != APP_MSG_OK) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "app_message_open failed: %d", (int)res);
   }

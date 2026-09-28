@@ -10,6 +10,9 @@
 #define PERSIST_KEY_COLOR_HEADER 6
 #define PERSIST_KEY_COLOR_WARN   7
 #define PERSIST_KEY_SHOW_DATE    8
+#define PERSIST_KEY_MED_METRICS  9
+#define PERSIST_KEY_ENV_METRICS  10
+#define PERSIST_KEY_SYS_METRICS  11
 
 // ---------------------------------------------------------------------------
 // Config bitmask
@@ -48,6 +51,39 @@ uint32_t storage_load_show_date(void) {
 
 void storage_save_show_date(uint32_t show) {
   persist_write_int(PERSIST_KEY_SHOW_DATE, (int32_t)show);
+}
+
+// ---------------------------------------------------------------------------
+// Per-panel metrics masks (bit i = metric i enabled, fixed C-side order)
+// ---------------------------------------------------------------------------
+
+static uint32_t prv_load_mask(int key, uint32_t def) {
+  if (!persist_exists(key)) return def;
+  return (uint32_t)persist_read_int(key);
+}
+
+uint32_t storage_load_med_metrics(void) {
+  return prv_load_mask(PERSIST_KEY_MED_METRICS, 0x03);  // BPM + STEPS
+}
+
+void storage_save_med_metrics(uint32_t mask) {
+  persist_write_int(PERSIST_KEY_MED_METRICS, (int32_t)mask);
+}
+
+uint32_t storage_load_env_metrics(void) {
+  return prv_load_mask(PERSIST_KEY_ENV_METRICS, 0x3F);  // all 6
+}
+
+void storage_save_env_metrics(uint32_t mask) {
+  persist_write_int(PERSIST_KEY_ENV_METRICS, (int32_t)mask);
+}
+
+uint32_t storage_load_sys_metrics(void) {
+  return prv_load_mask(PERSIST_KEY_SYS_METRICS, 0x03);  // BAT + COM
+}
+
+void storage_save_sys_metrics(uint32_t mask) {
+  persist_write_int(PERSIST_KEY_SYS_METRICS, (int32_t)mask);
 }
 
 // ---------------------------------------------------------------------------
