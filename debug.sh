@@ -6,13 +6,19 @@
 # Usage:
 #   ./debug.sh [--install] <case>   run one case (each capture opened with macOS open)
 #   ./debug.sh --all                iterate all cases + write debug/index.md
+#   ./debug.sh --emu <emu> ...      use another emulator (flint, gabbro; OUT debug/<emu>)
 #   ./debug.sh --list               list available cases
 #   ./debug.sh --reset              send default config and exit
 #
 # Requires: app installed & running in the emulator (--install does it once).
 
 EMU=emery
+while [ "$1" = "--emu" ]; do
+  EMU=$2
+  shift 2
+done
 OUT=debug
+[ "$EMU" != "emery" ] && OUT="debug/$EMU"
 mkdir -p "$OUT"
 
 # --- message keys (list-format numbering, see package.json) ---
@@ -64,7 +70,6 @@ send_color_defaults() {
 shot() {
   pebble screenshot --no-open --emulator "$EMU" "$OUT/shot_$1.png" >/dev/null 2>&1 || return 1
   echo "captured $OUT/shot_$1.png"
-  open "$OUT/shot_$1.png"
 }
 
 run_case() {
@@ -141,7 +146,7 @@ if [ "$INSTALL" = "1" ]; then
 fi
 
 if [ -z "$1" ]; then
-  echo "usage: ./debug.sh [--install] <case> | --all | --list | --reset"
+  echo "usage: ./debug.sh [--emu emu] [--install] <case> | --all | --list | --reset"
   echo "cases: ./debug.sh --list"
   exit 1
 fi
