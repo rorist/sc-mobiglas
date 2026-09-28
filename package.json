@@ -1,7 +1,7 @@
 {
   "name": "sc-mobiglas",
   "author": "Rorist",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "SC mobiGlas is a fan-made watchface for Pebble PT2, inspired by Star Citizen's holographic interface. Display time, weather, health data, battery, and customizable manufacturer logos. This is an unofficial fan project, not affiliated with Cloud Imperium Games.",
   "license": "MIT",
   "keywords": [
