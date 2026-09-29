@@ -10,33 +10,6 @@ void draw_panel_border(GContext *ctx, GRect bounds, GColor color) {
   graphics_draw_round_rect(ctx, bounds, 3);
 }
 
-void draw_corner_accents(GContext *ctx, GRect bounds, GColor color) {
-  const int leg = 6;
-  const int inset = 1;
-  int x0 = bounds.origin.x + inset;
-  int y0 = bounds.origin.y + inset;
-  int x1 = x0 + bounds.size.w - 1 - 2 * inset;
-  int y1 = y0 + bounds.size.h - 1 - 2 * inset;
-
-  graphics_context_set_stroke_color(ctx, color);
-
-  // Top-left
-  graphics_draw_line(ctx, GPoint(x0, y0), GPoint(x0 + leg, y0));
-  graphics_draw_line(ctx, GPoint(x0, y0), GPoint(x0, y0 + leg));
-
-  // Top-right
-  graphics_draw_line(ctx, GPoint(x1 - leg, y0), GPoint(x1, y0));
-  graphics_draw_line(ctx, GPoint(x1, y0), GPoint(x1, y0 + leg));
-
-  // Bottom-left
-  graphics_draw_line(ctx, GPoint(x0, y1 - leg), GPoint(x0, y1));
-  graphics_draw_line(ctx, GPoint(x0, y1), GPoint(x0 + leg, y1));
-
-  // Bottom-right
-  graphics_draw_line(ctx, GPoint(x1, y1 - leg), GPoint(x1, y1));
-  graphics_draw_line(ctx, GPoint(x1 - leg, y1), GPoint(x1, y1));
-}
-
 // Extended header: accent bar + title (left) + optional right-aligned label
 // + partial underline + arrow glyph. right_label == NULL -> title-only layout.
 void draw_panel_header_ex(GContext *ctx, GRect bounds, const char *title,
@@ -141,21 +114,6 @@ void draw_ring_gauge(GContext *ctx, GRect box, int percent,
                          DEG_TO_TRIGANGLE(0),
                          DEG_TO_TRIGANGLE((percent * 360) / 100));
   }
-}
-
-void draw_dual_ring(GContext *ctx, GRect box,
-                    int outer_pct, GColor outer_col,
-                    int inner_pct, GColor inner_col) {
-  const uint16_t thickness = 4;
-  const int innerpad = thickness + 3;  // gap between rings
-
-  // Outer ring
-  draw_ring_gauge(ctx, box, outer_pct, thickness, COLOR_GAUGE_BG, outer_col);
-
-  // Inner ring (reduced box)
-  GRect inner = GRect(box.origin.x + innerpad, box.origin.y + innerpad,
-                      box.size.w - 2 * innerpad, box.size.h - 2 * innerpad);
-  draw_ring_gauge(ctx, inner, inner_pct, thickness, COLOR_GAUGE_BG, inner_col);
 }
 
 // ---------------------------------------------------------------------------

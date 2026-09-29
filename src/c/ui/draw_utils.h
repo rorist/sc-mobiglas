@@ -9,9 +9,6 @@ void draw_panel_fill(GContext *ctx, GRect bounds, GColor color);
 // Draw a 1px stroke rectangle border
 void draw_panel_border(GContext *ctx, GRect bounds, GColor color);
 
-// Draw L-shaped corner accents (6px legs, 1px inset) at all 4 corners
-void draw_corner_accents(GContext *ctx, GRect bounds, GColor color);
-
 // Draw panel header: accent bar + label + partial underline + arrow glyph
 void draw_panel_header(GContext *ctx, GRect bounds, const char *title,
                        GFont font, GColor color);
@@ -28,11 +25,6 @@ void draw_battery_bar(GContext *ctx, GRect bounds, int percent, GColor color);
 // Draw a single ring gauge (track + filled arc), thickness inset from edge
 void draw_ring_gauge(GContext *ctx, GRect box, int percent,
                      uint16_t thickness, GColor track, GColor fill);
-
-// Draw two concentric ring gauges (outer + inner)
-void draw_dual_ring(GContext *ctx, GRect box,
-                    int outer_pct, GColor outer_col,
-                    int inner_pct, GColor inner_col);
 
 // Draw an 8x8px holo-style weather icon at origin (top-left)
 // cond_idx: 0 CLEAR, 1 CLOUDY, 2 FOG, 3 RAIN, 4 SNOW, 5 STORM, 6 UNKNOWN
