@@ -103,8 +103,11 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
                            GTextOverflowModeTrailingEllipsis,
                            GTextAlignmentLeft, NULL);
       }
+      // Very narrow cells (demoted weather): shrink the temp rect so it
+      // doesn't slide under the icon
+      const int temp_w = (cell_w < 44) ? cell_w - 12 : 32;
       graphics_draw_text(ctx, s_temp_buf, fonts_get(FONT_SIZE_HEADER),
-                         GRect(cell_x + cell_w - 32, y_line - l14, 32,
+                         GRect(cell_x + cell_w - temp_w, y_line - l14, temp_w,
                                14 + l14),
                          GTextOverflowModeTrailingEllipsis,
                          GTextAlignmentRight, NULL);
@@ -193,30 +196,41 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     if (mask & (1u << i)) act[n++] = i;
   }
 
-  // Pack into rows: full = own row; halves pair up; lone trailing half centered
+  // Pack into rows: full = own row; halves pair up; lone trailing half
+  // centered. If the block overflows the content height (round displays run
+  // tight), a second pass demotes the full-width metrics (weather, wind) to
+  // half cells sharing one line — frees a whole 15px row. Rect displays keep
+  // their validated layout (narrow halves would truncate the temperature).
   const int half = w / 2;
   int rows[6][2];            // {metric, cell_x}; metric -1 = none
-  int row_w[6];              // cell width for metric 0 of the row
+  int row_w[6];              // cell width for the row's first cell
   int row_count = 0;
-  for (int i = 0; i < n; ) {
-    if (act[i] <= 1) {                    // full-width metric
-      rows[row_count][0] = act[i];
-      rows[row_count][1] = -1;
-      row_w[row_count] = w;
-      row_count++;
-      i++;
-    } else {                              // half metric
-      rows[row_count][0] = act[i];
-      rows[row_count][1] = -1;
-      row_w[row_count] = half;
-      if (i + 1 < n && act[i + 1] > 1) {  // pair with the next half
-        rows[row_count][1] = act[i + 1];
-        i += 2;
-      } else {
-        i++;                              // lone trailing half — centered
+  bool demoted = false;
+  for (int pass = 0; pass < 2; pass++) {
+    row_count = 0;
+    demoted = (pass > 0) && PBL_IF_ROUND_ELSE(1, 0);
+    for (int i = 0; i < n; ) {
+      if ((act[i] <= 1) && !demoted) {      // full-width metric
+        rows[row_count][0] = act[i];
+        rows[row_count][1] = -1;
+        row_w[row_count] = w;
+        row_count++;
+        i++;
+      } else {                              // half metric (or demoted full)
+        rows[row_count][0] = act[i];
+        rows[row_count][1] = -1;
+        row_w[row_count] = half;
+        if (i + 1 < n && (demoted || act[i + 1] > 1)) {  // pair with next
+          rows[row_count][1] = act[i + 1];
+          i += 2;
+        } else {
+          i++;                              // lone trailing half — centered
+        }
+        row_count++;
       }
-      row_count++;
     }
+    const int block = row_count * 14 + (row_count - 1);
+    if (block <= ch) break;                 // fits
   }
 
   // Vertical block: one 14px line per row, 1px gaps, centered in content

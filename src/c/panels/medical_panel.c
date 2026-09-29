@@ -178,6 +178,13 @@ static void prv_draw_ring_cell(GContext *ctx, int x, int y, int rd,
   }
 
   graphics_context_set_text_color(ctx, slot->value_col);
+  graphics_draw_text(ctx, slot->value, fonts_get(FONT_SIZE_HEADER),
+                     GRect(x, y + (rd - 14) / 2 - FONT_LEADING_14,
+                           rd, 14 + FONT_LEADING_14),
+                     GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentCenter, NULL);
+
+  graphics_context_set_text_color(ctx, watchface_get_color_label());
   graphics_draw_text(ctx, slot->label, fonts_get(FONT_SIZE_HEADER),
                      GRect(x + (rd - cell_w) / 2, y + rd + 2 - FONT_LEADING_14,
                            cell_w, 14 + FONT_LEADING_14),

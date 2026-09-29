@@ -29,6 +29,37 @@ static void prv_load_logo(void) {
   s_logo_bmp = gbitmap_create_with_resource(res);
 }
 
+// Nearest-neighbor downscale for 8-bit palette bitmaps: hero-mode logos too
+// tall for the 80px face. Transparent palette entries (alpha 0) are skipped;
+// anything else falls back to a plain draw.
+static void prv_draw_bitmap_scaled(GContext *ctx, GBitmap *bmp, GRect dst) {
+  if (gbitmap_get_format(bmp) != GBitmapFormat8Bit
+      || dst.size.w <= 0 || dst.size.h <= 0) {
+    graphics_draw_bitmap_in_rect(ctx, bmp, dst);
+    return;
+  }
+  const GRect src = gbitmap_get_bounds(bmp);
+  GColor *palette = gbitmap_get_palette(bmp);
+  if (!palette) {
+    graphics_draw_bitmap_in_rect(ctx, bmp, dst);
+    return;
+  }
+  const int sw = src.size.w, sh = src.size.h;
+  for (int y = 0; y < dst.size.h; y++) {
+    const int sy = y * sh / dst.size.h;
+    const GBitmapDataRowInfo row_info = gbitmap_get_data_row_info(bmp, sy);
+    for (int x = 0; x < dst.size.w; x++) {
+      const int sx = x * sw / dst.size.w;
+      if (sx < row_info.min_x || sx > row_info.max_x) continue;
+      const GColor c = palette[row_info.data[sx]];
+      if (c.a == 0) continue;
+      graphics_context_set_fill_color(ctx, c);
+      graphics_fill_rect(ctx, GRect(dst.origin.x + x, dst.origin.y + y, 1, 1),
+                         0, GCornerNone);
+    }
+  }
+}
+
 static void prv_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
 
@@ -56,7 +87,10 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   int time_rect_h;
   if (hero) {
     const int logo_h = show_logo ? 4 + logo_bounds.size.h : 0;
-    if (content.size.w >= 170 && 76 + logo_h + (date_on ? 21 : 0) <= content.size.h) {
+    // 80px face as soon as the width allows it; an oversized logo is
+    // downscaled to fit (room for a >=20px logo) instead of stepping the
+    // whole face down to 72px
+    if (content.size.w >= 170 && 76 + 20 + (date_on ? 21 : 0) <= content.size.h) {
       time_font = FONT_SIZE_TIME_MASSIVE;
       time_rect_h = 76;
     } else if (68 + logo_h + (date_on ? 21 : 0) <= content.size.h) {
@@ -94,9 +128,21 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
                    : FONT_LEADING_60;
 #endif
 
+  // Effective hero logo rect: downscaled when the full-size logo doesn't
+  // fit under the 80px face (ratio preserved, nearest-neighbor)
+  int logo_draw_w = logo_bounds.size.w;
+  int logo_draw_h = logo_bounds.size.h;
+  if (hero && show_logo && time_font == FONT_SIZE_TIME_MASSIVE) {
+    const int avail = content.size.h - time_rect_h - 4 - (date_on ? 21 : 0);
+    if (avail > 0 && avail < logo_draw_h) {
+      logo_draw_w = logo_draw_w * avail / logo_draw_h;
+      logo_draw_h = avail;
+    }
+  }
+
   // Vertical block: time (+ logo below in hero) (+ date) — centered
   int block_h = time_rect_h;
-  if (hero && show_logo) block_h += 4 + logo_bounds.size.h;
+  if (hero && show_logo) block_h += 4 + logo_draw_h;
   if (date_on) block_h += 3 + 18;
   int y_offset = content.origin.y + (content.size.h - block_h) / 2;
   if (y_offset < content.origin.y) y_offset = content.origin.y;
@@ -120,11 +166,15 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   if (hero && show_logo) {
     y += 4;
     GRect logo_rect = GRect(
-        content.origin.x + (content.size.w - logo_bounds.size.w) / 2,
-        y, logo_bounds.size.w, logo_bounds.size.h);
+        content.origin.x + (content.size.w - logo_draw_w) / 2,
+        y, logo_draw_w, logo_draw_h);
     graphics_context_set_compositing_mode(ctx, GCompOpSet);
-    graphics_draw_bitmap_in_rect(ctx, s_logo_bmp, logo_rect);
-    y += logo_bounds.size.h;
+    if (logo_draw_h == logo_bounds.size.h) {
+      graphics_draw_bitmap_in_rect(ctx, s_logo_bmp, logo_rect);
+    } else {
+      prv_draw_bitmap_scaled(ctx, s_logo_bmp, logo_rect);
+    }
+    y += logo_draw_h;
   }
 
   if (date_on) {

@@ -9,9 +9,11 @@
 #define COLOR_BG         GColorBlack
 // B&W (flint): black panels on black bg, structure comes from borders/accents
 #define COLOR_PANEL_BG   PBL_IF_BW_ELSE(GColorBlack, GColorOxfordBlue)
-#define COLOR_WARN       GColorOrange
-#define COLOR_SAFE       GColorMalachite
-#define COLOR_ALERT      GColorRed
+// 1-bit (flint): orange/red binarize to black on black = invisible (low
+// battery, STORM icon, abnormal HR, COM ERR) — clamp semantic colors to white
+#define COLOR_WARN       PBL_IF_BW_ELSE(GColorWhite, GColorOrange)
+#define COLOR_SAFE       PBL_IF_BW_ELSE(GColorWhite, GColorMalachite)
+#define COLOR_ALERT      PBL_IF_BW_ELSE(GColorWhite, GColorRed)
 #define COLOR_GAUGE_BG   GColorCobaltBlue
 
 // Configurable text colors (runtime, set via settings) — see getters below
