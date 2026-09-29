@@ -27,6 +27,16 @@ static char s_sun_rise[6] = "--:--";
 static char s_sun_set[6]  = "--:--";
 
 // Format s_temp_buf from s_last_temp_c per current config (°C/°F)
+// Icon+gap width and "wide enough for icon" threshold, shared by
+// prv_draw_metric and prv_item_need_w (flint dots are narrower than icons)
+#if PBL_DISPLAY_WIDTH < 200
+#define ENV_ICON_W  4
+#define ENV_WIDE_MIN 34
+#else
+#define ENV_ICON_W  10
+#define ENV_WIDE_MIN 40
+#endif
+
 static void prv_format_temp(void) {
   if (s_last_temp_c == TEMP_UNAVAILABLE) {
     snprintf(s_temp_buf, sizeof(s_temp_buf),
@@ -42,13 +52,10 @@ static void prv_format_temp(void) {
 static void prv_format_wind(void) {
   if (s_wind_speed < 0) {
     snprintf(s_wind_short, sizeof(s_wind_short), "---");
-  } else {
-    snprintf(s_wind_short, sizeof(s_wind_short), "%dkm/h", (int)s_wind_speed);
-  }
-  if (s_wind_speed < 0) {
     snprintf(s_wind_buf, sizeof(s_wind_buf), "---");
     return;
   }
+  snprintf(s_wind_short, sizeof(s_wind_short), "%dkm/h", (int)s_wind_speed);
   int n = snprintf(s_wind_buf, sizeof(s_wind_buf), "%d km/h", (int)s_wind_speed);
   if (s_wind_dir >= 0 && n > 0 && n < (int)sizeof(s_wind_buf) - 5) {
     static const char *dirs[8] = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
@@ -100,37 +107,64 @@ static void prv_draw_dot(GContext *ctx, GPoint p) {
   graphics_fill_rect(ctx, GRect(p.x, p.y, 2, 2), 0, GCornerNone);
 }
 
+// Measured width of a text at the given face (box wide enough that no
+// clipping occurs — matches the previous inline measurements)
+static int prv_text_w(const char *txt, GFont f) {
+  return (int)graphics_text_layout_get_content_size(
+             txt, f, GRect(0, 0, 200, 20), GTextOverflowModeTrailingEllipsis,
+             GTextAlignmentLeft)
+      .w;
+}
+
+// Display buffer of a half/full metric (wind keeps its direction only in
+// wide cells)
+static const char *prv_metric_txt(int metric, bool wide) {
+  switch (metric) {
+    case 1:  return wide ? s_wind_buf : s_wind_short;
+    case 2:  return s_hum_buf;
+    case 3:  return s_uv_buf;
+    case 4:  return s_sun_rise;
+    default: return s_sun_set;
+  }
+}
+
+// Icon of one metric cell — flint degrades every icon to a 2x2 dot
+static void prv_draw_metric_icon(GContext *ctx, int metric, int cell_x,
+                                 int y_line) {
+  if (PBL_DISPLAY_WIDTH < 200) {
+    prv_draw_dot(ctx, GPoint(cell_x, y_line + 6));
+    return;
+  }
+  const GPoint p = GPoint(cell_x, y_line + (metric == 0 ? 2 : 3));
+  switch (metric) {
+    case 0:  draw_weather_icon(ctx, p, prv_cond_index(s_cond_buf)); break;
+    case 1:  draw_wind_icon(ctx, p); break;
+    case 2:  draw_drop_icon(ctx, p); break;
+    case 3:  draw_uv_icon(ctx, p); break;
+    case 4:  draw_sun_icon(ctx, p, false); break;
+    default: draw_sun_icon(ctx, p, true); break;
+  }
+}
+
 static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
                             int y_line, int pad, GFont font, int l) {
   const int l14 = l;
-  const bool dots = (PBL_DISPLAY_WIDTH < 200);  // flint: icons -> dots
-  const int iw = dots ? 4 : 10;      // icon+gap width (dot 2+2 vs icon 8+2)
-  const int wide_min = dots ? 34 : 40;
+  const int iw = ENV_ICON_W;
+  const int wide_min = ENV_WIDE_MIN;
   switch (metric) {
     case 0: {  // Weather: icon + condition + temperature flowing left
-      // Temperature is measured and always shown, flowing right after the
-      // condition (+4px) — no more right-aligned hole in wide cells
       const GSize temp_size = graphics_text_layout_get_content_size(
           s_temp_buf, font, GRect(cell_x, y_line - l14, cell_w, 14 + l14),
           GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft);
       int temp_w = temp_size.w;
       if (temp_w > cell_w) temp_w = cell_w;
-      // Icon only when the full temp still fits after it — ultra-narrow
-      // shared cells fall back to temp-only text
+      // Icon only when the full temp still fits after it
       const bool wico = (cell_w >= iw + temp_w);
       const int ix = cell_x + (wico ? iw : 0);
-      if (wico) {
-        if (dots) {
-          prv_draw_dot(ctx, GPoint(cell_x, y_line + 6));
-        } else {
-          draw_weather_icon(ctx, GPoint(cell_x, y_line + 2),
-                            prv_cond_index(s_cond_buf));
-        }
-      }
+      if (wico) prv_draw_metric_icon(ctx, 0, cell_x, y_line);
       int tx = ix;  // default: right after the icon (or cell start)
       // Condition: full text if it fits before the temp, short form
-      // (CLR/CLD/FOG/RN/SNW/STM) otherwise, icon only as a last resort —
-      // the condition now shows at any cell width
+      // (CLR/CLD/FOG/RN/SNW/STM) otherwise, icon only as a last resort
       static const char *const cond_short[7] = {
           "CLR", "CLD", "FOG", "RN", "SNW", "STM", "N-A" };
       const int avail = cell_w - (wico ? iw : 0) - temp_w - 4 - pad;
@@ -159,102 +193,33 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
                          GTextAlignmentLeft, NULL);
       break;
     }
-    case 1:  // Wind
-      {
-        // Full text (with direction) when the cell can hold it, short form
-        // otherwise; the icon rides along only when text + icon fit —
-        // ultra-narrow measured splits fall back to text only.
-        const int wfull = (int)graphics_text_layout_get_content_size(
-            s_wind_buf, font, GRect(0, 0, 200, 20),
-            GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft).w;
-        const int wshort = (int)graphics_text_layout_get_content_size(
-            s_wind_short, font, GRect(0, 0, 200, 20),
-            GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft).w;
-        const bool full = (cell_w >= iw + wfull);
-        const bool wico = full || (cell_w >= iw + wshort);
-        const char *wind_txt = full ? s_wind_buf : s_wind_short;
-        if (wico) {
-          if (dots) {
-            prv_draw_dot(ctx, GPoint(cell_x, y_line + 6));
-          } else {
-            draw_wind_icon(ctx, GPoint(cell_x, y_line + 3));
-          }
-        }
-        graphics_draw_text(
-            ctx, wind_txt, font,
-            GRect(cell_x + (wico ? iw : 0), y_line - l14,
-                  cell_w - (wico ? iw : 0) - pad, 14 + l14),
-            GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
-      }
+    case 1: {  // Wind: full text (with direction) when it fits, short form
+              // otherwise; icon only when text + icon fit
+      const int wfull = prv_text_w(s_wind_buf, font);
+      const int wshort = prv_text_w(s_wind_short, font);
+      const bool full = (cell_w >= iw + wfull);
+      const bool wico = full || (cell_w >= iw + wshort);
+      const char *wind_txt = full ? s_wind_buf : s_wind_short;
+      if (wico) prv_draw_metric_icon(ctx, 1, cell_x, y_line);
+      graphics_draw_text(
+          ctx, wind_txt, font,
+          GRect(cell_x + (wico ? iw : 0), y_line - l14,
+                cell_w - (wico ? iw : 0) - pad, 14 + l14),
+          GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
       break;
-    case 2:  // Humidity
-      {
-        const bool wide = (cell_w >= wide_min);  // narrow cells: text only
-        if (wide) {
-          if (dots) {
-            prv_draw_dot(ctx, GPoint(cell_x, y_line + 6));
-          } else {
-            draw_drop_icon(ctx, GPoint(cell_x, y_line + 3));
-          }
-        }
-        graphics_draw_text(ctx, s_hum_buf, font,
-                           GRect(cell_x + (wide ? iw : 0), y_line - l14,
-                                 cell_w - (wide ? iw : 0) - pad, 14 + l14),
-                           GTextOverflowModeTrailingEllipsis,
-                           GTextAlignmentLeft, NULL);
-      }
+    }
+    default: {  // Half metrics: humidity, UV, sunrise, sunset — text with
+                // icon only when the cell is wide enough
+      const bool wide = (cell_w >= wide_min);
+      if (wide) prv_draw_metric_icon(ctx, metric, cell_x, y_line);
+      const int off = wide ? iw : 0;
+      graphics_draw_text(ctx, prv_metric_txt(metric, false), font,
+                         GRect(cell_x + off, y_line - l14,
+                               cell_w - off - pad, 14 + l14),
+                         GTextOverflowModeTrailingEllipsis,
+                         GTextAlignmentLeft, NULL);
       break;
-    case 3:  // UV
-      {
-        const bool wide = (cell_w >= wide_min);  // narrow cells: text only
-        if (wide) {
-          if (dots) {
-            prv_draw_dot(ctx, GPoint(cell_x, y_line + 6));
-          } else {
-            draw_uv_icon(ctx, GPoint(cell_x, y_line + 3));
-          }
-        }
-        graphics_draw_text(ctx, s_uv_buf, font,
-                           GRect(cell_x + (wide ? iw : 0), y_line - l14,
-                                 cell_w - (wide ? iw : 0) - pad, 14 + l14),
-                           GTextOverflowModeTrailingEllipsis,
-                           GTextAlignmentLeft, NULL);
-      }
-      break;
-    case 4:  // Sunrise
-      {
-        const bool wide = (cell_w >= wide_min);  // narrow cells: text only
-        if (wide) {
-          if (dots) {
-            prv_draw_dot(ctx, GPoint(cell_x, y_line + 6));
-          } else {
-            draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), false);
-          }
-        }
-        graphics_draw_text(ctx, s_sun_rise, font,
-                           GRect(cell_x + (wide ? iw : 0), y_line - l14,
-                                 cell_w - (wide ? iw : 0) - pad, 14 + l14),
-                           GTextOverflowModeTrailingEllipsis,
-                           GTextAlignmentLeft, NULL);
-      }
-      break;
-    case 5:  // Sunset
-      {
-        const bool wide = (cell_w >= wide_min);  // narrow cells: text only
-        if (wide) {
-          if (dots) {
-            prv_draw_dot(ctx, GPoint(cell_x, y_line + 6));
-          } else {
-            draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), true);
-          }
-        }
-        graphics_draw_text(ctx, s_sun_set, font,
-                           GRect(cell_x + (wide ? iw : 0), y_line - l14,
-                                 cell_w - (wide ? iw : 0) - pad, 14 + l14),
-                           GTextOverflowModeTrailingEllipsis,
-                           GTextAlignmentLeft, NULL);
-      }
-      break;
+    }
   }
 }
 
@@ -262,27 +227,16 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
 // wide (solo flow layout): wind keeps its direction, weather reserves room
 // for the full condition text; narrow: degradation forms apply.
 static int prv_item_need_w(int metric, GFont pf, bool wide) {
-  const int iw = (PBL_DISPLAY_WIDTH < 200) ? 4 : 10;  // icon+gap width
-  const int min_wide = (PBL_DISPLAY_WIDTH < 200) ? 34 : 40;
+  const int iw = ENV_ICON_W;
+  const int min_wide = ENV_WIDE_MIN;
   if (metric == 0) {
-    const int temp_w = (int)graphics_text_layout_get_content_size(
-        s_temp_buf, pf, GRect(0, 0, 200, 20),
-        GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft).w;
+    const int temp_w = prv_text_w(s_temp_buf, pf);
     if (!wide) return iw + temp_w + 7;  // +7: pair pad + measure underestimate
-    const int cond_w = (int)graphics_text_layout_get_content_size(
-        s_cond_buf, pf, GRect(0, 0, 200, 20),
-        GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft).w;
+    const int cond_w = prv_text_w(s_cond_buf, pf);
     return iw + cond_w + 4 + temp_w + 2;
   }
-  const char *txt = (metric == 1) ? (wide ? s_wind_buf : s_wind_short)
-                  : (metric == 2) ? s_hum_buf
-                  : (metric == 3) ? s_uv_buf
-                  : (metric == 4) ? s_sun_rise
-                                  : s_sun_set;
-  int wd = iw + (int)graphics_text_layout_get_content_size(
-                   txt, pf, GRect(0, 0, 200, 20),
-                   GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft)
-                   .w;
+  const char *txt = prv_metric_txt(metric, wide);
+  int wd = iw + prv_text_w(txt, pf);
   if (wide && wd < min_wide) {
     wd = min_wide;  // keep the icon readable in flow layout
   }
