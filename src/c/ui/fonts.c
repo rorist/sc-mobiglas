@@ -7,6 +7,8 @@ void fonts_init(void) {
       resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_14));
   s_fonts[FONT_SIZE_VALUE] = fonts_load_custom_font(
       resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_18));
+  s_fonts[FONT_SIZE_METRIC] = fonts_load_custom_font(
+      resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_12));
 #if PBL_DISPLAY_WIDTH < 200
   // Flint (144x168): smaller time fonts fit the narrow screen
   s_fonts[FONT_SIZE_TIME] = fonts_load_custom_font(

@@ -74,8 +74,8 @@ send_defaults() { send_config 3 63 3 0 0 1 1 1 1 7; }
 
 send_color_defaults() {
   pebble send-app-message --emulator "$EMU" --int \
-    $K_COL_TIME=11206911 $K_COL_VALUE=16777215 $K_COL_LABEL=5614847 \
-    $K_COL_HEADER=43775 $K_COL_WARN=16744448 >/dev/null
+    $K_COL_TIME=11206655 $K_COL_VALUE=16777215 $K_COL_LABEL=5614335 \
+    $K_COL_HEADER=43775 $K_COL_WARN=16746496 >/dev/null
 }
 
 shot() {

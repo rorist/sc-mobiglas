@@ -52,8 +52,10 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     com_w = 8 + icon_gap + com_size.w;
   }
 
-  // COM: right-aligned group (icon + text)
-  int com_x = content.origin.x + content.size.w - com_w;
+  // COM group: right of the battery bar when BAT is on, but alone on the
+  // line it sits left like every other single metric
+  int com_x = content.origin.x;
+  if (show_bat) com_x += content.size.w - com_w;
   if (show_com) {
     graphics_context_set_stroke_color(ctx, watchface_get_color_label());
     draw_comm_icon(ctx, GPoint(com_x, y + 3));

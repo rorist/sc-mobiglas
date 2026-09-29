@@ -16,6 +16,7 @@
 // metrics mask (watchface_get_med_metrics), in this fixed order.
 typedef struct {
   const char *label;
+  const char *label_short;  // 2-letter form drawn inside narrow rings
   char value[12];
   int pct;
   GColor fill;
@@ -50,6 +51,7 @@ static HealthValue prv_goal(HealthMetric metric, HealthValue fallback) {
 static void prv_fill_hr(int idx) {
   MedSlot *s = &s_slots[idx];
   s->label = "BPM";
+  s->label_short = "BP";
   HealthValue hr = health_service_peek_current_value(HealthMetricHeartRateBPM);
   int bpm = (int)hr;
   bool normal = (bpm >= 50 && bpm <= 100);
@@ -65,10 +67,12 @@ static void prv_fill_hr(int idx) {
                         : watchface_get_color_warn();
 }
 
-static void prv_fill_sum_int(int idx, const char *label, HealthMetric metric,
+static void prv_fill_sum_int(int idx, const char *label,
+                             const char *label_short, HealthMetric metric,
                              HealthValue goal_fallback) {
   MedSlot *s = &s_slots[idx];
   s->label = label;
+  s->label_short = label_short;
   HealthValue v = health_service_sum_today(metric);
   if (v > 0) {
     snprintf(s->value, sizeof(s->value), "%d", (int)v);
@@ -81,10 +85,12 @@ static void prv_fill_sum_int(int idx, const char *label, HealthMetric metric,
   s->value_col = watchface_get_color_value();
 }
 
-static void prv_fill_duration(int idx, const char *label, HealthMetric metric,
+static void prv_fill_duration(int idx, const char *label,
+                              const char *label_short, HealthMetric metric,
                               int goal_s) {
   MedSlot *s = &s_slots[idx];
   s->label = label;
+  s->label_short = label_short;
   HealthValue secs = health_service_sum_today(metric);
   if (secs > 0) {
     int h = (int)secs / 3600;
@@ -105,20 +111,21 @@ static void prv_fill_metric(int idx) {
       prv_fill_hr(idx);
       break;
     case 1:  // Steps — goal: daily average, fallback 10000
-      prv_fill_sum_int(idx, "STEPS", HealthMetricStepCount, 10000);
+      prv_fill_sum_int(idx, "STEPS", "ST", HealthMetricStepCount, 10000);
       break;
     case 2:  // Sleep
-      prv_fill_duration(idx, "SLEEP", HealthMetricSleepSeconds,
+      prv_fill_duration(idx, "SLEEP", "SL", HealthMetricSleepSeconds,
                         MED_SLEEP_GOAL_S);
       break;
     case 3:  // Active kcal — goal: daily average, fallback 500
-      prv_fill_sum_int(idx, "KCAL", HealthMetricActiveKCalories,
+      prv_fill_sum_int(idx, "KCAL", "KC", HealthMetricActiveKCalories,
                        MED_KCAL_GOAL_FALLBACK);
       break;
     case 4:  // Distance (meters) — value in km
       {
         MedSlot *s = &s_slots[idx];
         s->label = "KM";
+        s->label_short = "KM";
         HealthValue meters = health_service_sum_today(
             HealthMetricWalkedDistanceMeters);
         if (meters > 0) {
@@ -136,15 +143,15 @@ static void prv_fill_metric(int idx) {
       }
       break;
     case 5:  // Active time — goal fallback 1h
-      prv_fill_duration(idx, "ACT", HealthMetricActiveSeconds,
+      prv_fill_duration(idx, "ACT", "AC", HealthMetricActiveSeconds,
                         MED_ACTIVE_GOAL_FALLBACK);
       break;
     case 6:  // Resting kcal
-      prv_fill_sum_int(idx, "RKCAL", HealthMetricRestingKCalories,
+      prv_fill_sum_int(idx, "RKCAL", "RK", HealthMetricRestingKCalories,
                        MED_RKCAL_GOAL_FALLBACK);
       break;
     case 7:  // Deep sleep
-      prv_fill_duration(idx, "DEEP", HealthMetricSleepRestfulSeconds,
+      prv_fill_duration(idx, "DEEP", "DP", HealthMetricSleepRestfulSeconds,
                         MED_DEEP_GOAL_S);
       break;
   }
@@ -164,14 +171,19 @@ static void prv_draw_ring_cell(GContext *ctx, int x, int y, int rd,
   draw_ring_gauge(ctx, GRect(x, y, rd, rd), slot->pct, 3,
                   PBL_IF_BW_ELSE(GColorWhite, COLOR_GAUGE_BG), slot->fill);
 
-  const int l14 = FONT_LEADING_14;
   if (rd < 28) {
-    // Narrow ring (flint): value below the gauge, no label — a 14px value
-    // inside a <28px ring clips the stroke and the label truncates.
+    // Narrow ring (flint): 2-letter label inside the ring + value below,
+    // both on the 12px metric face — unlabeled rings were unreadable
+    const int l12 = FONT_LEADING_12;
+    graphics_context_set_text_color(ctx, watchface_get_color_label());
+    graphics_draw_text(ctx, slot->label_short, fonts_get(FONT_SIZE_METRIC),
+                       GRect(x, y + (rd - 12) / 2 - l12, rd, 12 + l12),
+                       GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentCenter, NULL);
     graphics_context_set_text_color(ctx, slot->value_col);
-    graphics_draw_text(ctx, slot->value, fonts_get(FONT_SIZE_HEADER),
-                       GRect(x + (rd - cell_w) / 2, y + rd + 2 - l14,
-                             cell_w, 14 + l14),
+    graphics_draw_text(ctx, slot->value, fonts_get(FONT_SIZE_METRIC),
+                       GRect(x + (rd - cell_w) / 2, y + rd + 2 - l12,
+                             cell_w, 12 + l12),
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentCenter, NULL);
     return;

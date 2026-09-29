@@ -83,6 +83,20 @@ static void prv_draw_bitmap_scaled(GContext *ctx, GBitmap *bmp, GRect dst) {
   }
 }
 
+// Worst-case width of "04:44" per time face (Rajdhani digits scale at
+// ~2.29x the point size, measured at 56px) — the time/logo/date row is
+// laid out on this fixed width so nothing drifts when digits change.
+static int prv_time_max_w(FontSize f) {
+  switch (f) {
+    case FONT_SIZE_TIME_SMALL:   return 92;   // 40px face
+    case FONT_SIZE_TIME:         return 115;  // 50px face
+    case FONT_SIZE_TIME_BIG:     return 138;  // 60px face
+    case FONT_SIZE_TIME_HUGE:    return 165;  // 72px face
+    case FONT_SIZE_TIME_MASSIVE: return 184;  // 80px face
+    default:                     return 138;
+  }
+}
+
 static void prv_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
 
@@ -103,10 +117,11 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   const int l_time = FONT_LEADING_40;
 #else
   const bool show_logo = (s_logo_bmp != NULL);
-  // Hero mode = TIME is the only panel (tall content): time goes full-width
-  // with the logo centered below it; 80px only if width AND the full block
-  // (time + logo + date) fit the content, else step down to 72/60px
-  const bool hero = content.size.h >= 150;
+  // Hero mode = tall content (time-only, or the other rows pinned at their
+  // minimum leaves TIME huge): time goes full-width with the logo centered
+  // below it; 80px only if width AND the full block (time + logo + date)
+  // fit the content, else step down to 72/60px
+  const bool hero = content.size.h >= 120;
   FontSize time_font;
   int time_rect_h;
   if (hero) {
@@ -135,14 +150,17 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     time_rect_h = 52;
 #endif
   } else if (date_on) {
-    // Date takes 21px extra: ladder 72px (block 89) / 60px (77) / 50px (73)
-    // — short chord rows (gabbro) step down instead of clipping the date
+    // Date takes 21px extra: ladder 72px (block 89) / 60px (77) / 40px (61)
+    // / 50px — short chord rows (gabbro) step down instead of clipping
     if (content.size.h >= 89) {
       time_font = FONT_SIZE_TIME_HUGE;
       time_rect_h = 68;
     } else if (content.size.h >= 77) {
       time_font = FONT_SIZE_TIME_BIG;
       time_rect_h = 56;
+    } else if (content.size.h >= 61) {
+      time_font = FONT_SIZE_TIME_SMALL;
+      time_rect_h = 40;
     } else {
       time_font = FONT_SIZE_TIME;
       time_rect_h = 52;
@@ -161,13 +179,9 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
                    : FONT_LEADING_60;
 #endif
 
-  // Logo zone: flint narrows it (logos downscaled into 36px)
+  // Logo scale cap: flint downscales logos into its narrow 36px zone
 #if PBL_DISPLAY_WIDTH < 200
   const int LOGO_ZONE_W = 36;
-  const int LOGO_GAP = 4;
-#else
-  const int LOGO_ZONE_W = 64;
-  const int LOGO_GAP = 6;
 #endif
   // Effective logo rect: flint fits logos into the narrow zone; hero
   // downscales into the leftover height under the face (2px cushion) or
@@ -204,12 +218,22 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   int y_offset = content.origin.y + (content.size.h - block_h) / 2;
   if (y_offset < content.origin.y) y_offset = content.origin.y;
 
-  // Logo zone on the right (normal mode only) — time AND date keep the
-  // same position whatever logo is active
+  // Logo layout (normal mode only): the time slot is sized on the
+  // worst-case time width (no per-minute drift); the logo is anchored to
+  // the right edge with the SAME margin as the time slot on the left, so
+  // it sits centered between the time and the right edge
+  int time_x = content.origin.x;
   int time_w = content.size.w;
-  if (show_logo && !hero) time_w -= LOGO_ZONE_W + LOGO_GAP;
+  int logo_x = content.origin.x;
+  if (show_logo && !hero) {
+    time_w = prv_time_max_w(time_font);
+    int m = (content.size.w - time_w - logo_draw_w) / 3;
+    if (m < 0) m = 0;
+    time_x = content.origin.x + m;
+    logo_x = content.origin.x + content.size.w - m - logo_draw_w;
+  }
 
-  GRect time_rect = GRect(content.origin.x, y_offset - l_time,
+  GRect time_rect = GRect(time_x, y_offset - l_time,
                           time_w, time_rect_h + l_time);
   graphics_context_set_text_color(ctx, watchface_get_color_time());
   graphics_draw_text(ctx, s_time_buf, fonts_get(time_font), time_rect,
@@ -242,7 +266,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     const int l_date = FONT_LEADING_18;
     const FontSize date_font = FONT_SIZE_VALUE;
 #endif
-    GRect date_rect = GRect(content.origin.x, y + 3 - l_date, time_w,
+    GRect date_rect = GRect(time_x, y + 3 - l_date, time_w,
                             date_h + l_date);
     graphics_context_set_text_color(ctx, watchface_get_color_value());
     graphics_draw_text(ctx, s_date_buf, fonts_get(date_font), date_rect,
@@ -256,11 +280,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     int logo_y = content.origin.y
                + (content.size.h - logo_draw_h) / 2;
     if (logo_y < content.origin.y) logo_y = content.origin.y;
-    GRect logo_rect = GRect(
-        content.origin.x + content.size.w - LOGO_ZONE_W
-            + (LOGO_ZONE_W - logo_draw_w) / 2,
-        logo_y,
-        logo_draw_w, logo_draw_h);
+    GRect logo_rect = GRect(logo_x, logo_y, logo_draw_w, logo_draw_h);
     graphics_context_set_compositing_mode(ctx, GCompOpSet);
     if (logo_draw_h == logo_bounds.size.h) {
       graphics_draw_bitmap_in_rect(ctx, s_logo_bmp, logo_rect);

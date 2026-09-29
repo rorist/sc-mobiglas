@@ -7,8 +7,9 @@
 // - TIME is always visible, always the first row, full-width
 // - MEDICAL and ENVIRON sit side-by-side if both visible; otherwise full-width
 // - SYSTEMS is always the last row, full-width
-// - Available height is distributed proportionally to min heights,
-//   with leftover space shared equally
+// - Available height: non-TIME rows stay pinned at their minimum height,
+//   all leftover space goes to TIME (bigger time face) — flint keeps the
+//   even split (its tight budget needs it)
 // - If only TIME is visible, it is vertically centered
 // - Round displays: rows use the bezel chord width + vertical edge inset
 // ---------------------------------------------------------------------------
@@ -123,6 +124,8 @@ LayoutInfo layout_compute(GRect screen, uint8_t config) {
     h_mid = 0;
     h_bot = 0;
   } else if (surplus >= 0) {
+#if PBL_DISPLAY_WIDTH < 200
+    // Flint: budget is tight, keep the even split across rows
     int per_row = surplus / row_count;
     int remainder = surplus % row_count;
 
@@ -133,6 +136,13 @@ LayoutInfo layout_compute(GRect screen, uint8_t config) {
     if (remainder > 0) remainder--;
 
     h_bot = has_bot ? min_bot + per_row : 0;
+#else
+    // Emery/gabbro: data rows pinned at their minimum, all the surplus
+    // goes to TIME (SYSTEMS keeps the same height whatever the layout)
+    h_time = min_time + surplus;
+    h_mid = has_mid ? min_mid : 0;
+    h_bot = has_bot ? min_bot : 0;
+#endif
   } else {
     int remaining = avail_h;
     h_time = min_time * avail_h / total_min;

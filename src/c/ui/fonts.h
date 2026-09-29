@@ -11,6 +11,7 @@ typedef enum {
   FONT_SIZE_TIME_HUGE,   // 72px — very tall TIME panel (no logo); flint: 48px
   FONT_SIZE_TIME_MASSIVE, // 80px — time-only hero mode / date hidden; flint: 48px
   FONT_SIZE_TIME_SMALL,  // 40px — HH:MM with logo on round (chord-narrowed zone)
+  FONT_SIZE_METRIC,      // 12px — compact label/value text (flint small panels)
   FONT_SIZE_COUNT
 } FontSize;
 
@@ -27,6 +28,7 @@ GFont fonts_get(FontSize size);
 // so rendered glyphs align with the intended visual top of the rect
 // (large fonts reserve empty space above glyphs inside their line box).
 // V1 estimates — adjust via emulator screenshots if glyphs sit low/high.
+#define FONT_LEADING_12  2
 #define FONT_LEADING_14  2
 #define FONT_LEADING_18  3
 // Time fonts differ by platform: flint (144px wide) uses 40/48px,

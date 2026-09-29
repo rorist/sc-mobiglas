@@ -90,35 +90,65 @@ static int prv_cond_index(const char *c) {
 // Draw one metric cell (icon + text) inside [cell_x, cell_w] on line y_line.
 // Full-width metrics get the whole row; half metrics get their half. pad =
 // extra right inset (3px: left cell of a pair must not touch the next
-// icon; 0px: right/last cell, nothing follows).
+// icon; 0px: right/last cell, nothing follows). font/l: the metric face
+// (14px, or 12px when the panel runs tight) and its leading compensation.
 static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
-                            int y_line, int pad) {
-  const int l14 = FONT_LEADING_14;
+                            int y_line, int pad, GFont font, int l) {
+  const int l14 = l;
   switch (metric) {
-    case 0:  // Weather: icon + condition (left) + temperature (right)
-      draw_weather_icon(ctx, GPoint(cell_x, y_line + 2),
-                        prv_cond_index(s_cond_buf));
-      if (cell_w >= 88) {  // narrower cells: condition glyph in icon only
-        graphics_draw_text(ctx, s_cond_buf, fonts_get(FONT_SIZE_HEADER),
-                           GRect(cell_x + 10, y_line - l14, cell_w - 10 - 32,
-                                 14 + l14),
-                           GTextOverflowModeTrailingEllipsis,
-                           GTextAlignmentLeft, NULL);
+    case 0: {  // Weather: icon + condition + temperature flowing left
+      // Temperature is measured and always shown, flowing right after the
+      // condition (+4px) — no more right-aligned hole in wide cells
+      const GSize temp_size = graphics_text_layout_get_content_size(
+          s_temp_buf, font, GRect(cell_x, y_line - l14, cell_w, 14 + l14),
+          GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft);
+      int temp_w = temp_size.w;
+      if (temp_w > cell_w) temp_w = cell_w;
+      // Icon only when the full temp still fits after it — ultra-narrow
+      // shared cells fall back to temp-only text
+      const bool wico = (cell_w >= 10 + temp_w);
+      const int ix = cell_x + (wico ? 10 : 0);
+      if (wico) {
+        draw_weather_icon(ctx, GPoint(cell_x, y_line + 2),
+                          prv_cond_index(s_cond_buf));
       }
-      // Very narrow cells (demoted weather): shrink the temp rect so it
-      // doesn't slide under the icon; pad keeps a gap to the next cell
-      const int temp_w = (cell_w < 44) ? cell_w - 12 : 32;
-      graphics_draw_text(ctx, s_temp_buf, fonts_get(FONT_SIZE_HEADER),
-                         GRect(cell_x + cell_w - temp_w - pad, y_line - l14,
-                               temp_w, 14 + l14),
+      int tx = ix;  // default: right after the icon (or cell start)
+      // Condition: full text if it fits before the temp, short form
+      // (CLR/CLD/FOG/RN/SNW/STM) otherwise, icon only as a last resort —
+      // the condition now shows at any cell width
+      static const char *const cond_short[7] = {
+          "CLR", "CLD", "FOG", "RN", "SNW", "STM", "N-A" };
+      const int avail = cell_w - (wico ? 10 : 0) - temp_w - 4 - pad;
+      if (avail > 0) {
+        const GRect cond_rect = GRect(ix, y_line - l14, avail, 14 + l14);
+        const char *cond_txt = s_cond_buf;
+        GSize cond_size = graphics_text_layout_get_content_size(
+            cond_txt, font, cond_rect, GTextOverflowModeTrailingEllipsis,
+            GTextAlignmentLeft);
+        if (cond_size.w > avail) {
+          cond_txt = cond_short[prv_cond_index(s_cond_buf)];
+          cond_size = graphics_text_layout_get_content_size(
+              cond_txt, font, cond_rect, GTextOverflowModeTrailingEllipsis,
+              GTextAlignmentLeft);
+        }
+        if (cond_size.w <= avail) {
+          graphics_draw_text(ctx, cond_txt, font, cond_rect,
+                             GTextOverflowModeTrailingEllipsis,
+                             GTextAlignmentLeft, NULL);
+          tx = ix + cond_size.w + 4;
+        }
+      }
+      graphics_draw_text(ctx, s_temp_buf, font,
+                         GRect(tx, y_line - l14, temp_w, 14 + l14),
                          GTextOverflowModeTrailingEllipsis,
-                         GTextAlignmentRight, NULL);
+                         GTextAlignmentLeft, NULL);
       break;
+    }
     case 1:  // Wind
       {
         const char *wind_txt = (cell_w < 70) ? s_wind_short : s_wind_buf;
         draw_wind_icon(ctx, GPoint(cell_x, y_line + 3));
-        graphics_draw_text(ctx, wind_txt, fonts_get(FONT_SIZE_HEADER),
+        graphics_draw_text(ctx, wind_txt, font,
                            GRect(cell_x + 10, y_line - l14, cell_w - 10 - pad,
                                  14 + l14),
                            GTextOverflowModeTrailingEllipsis,
@@ -129,7 +159,7 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
       {
         const bool wide = (cell_w >= 40);  // narrow cells: text only
         if (wide) draw_drop_icon(ctx, GPoint(cell_x, y_line + 3));
-        graphics_draw_text(ctx, s_hum_buf, fonts_get(FONT_SIZE_HEADER),
+        graphics_draw_text(ctx, s_hum_buf, font,
                            GRect(cell_x + (wide ? 10 : 0), y_line - l14,
                                  cell_w - (wide ? 10 : 0) - pad, 14 + l14),
                            GTextOverflowModeTrailingEllipsis,
@@ -140,7 +170,7 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
       {
         const bool wide = (cell_w >= 40);  // narrow cells: text only
         if (wide) draw_uv_icon(ctx, GPoint(cell_x, y_line + 3));
-        graphics_draw_text(ctx, s_uv_buf, fonts_get(FONT_SIZE_HEADER),
+        graphics_draw_text(ctx, s_uv_buf, font,
                            GRect(cell_x + (wide ? 10 : 0), y_line - l14,
                                  cell_w - (wide ? 10 : 0) - pad, 14 + l14),
                            GTextOverflowModeTrailingEllipsis,
@@ -151,7 +181,7 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
       {
         const bool wide = (cell_w >= 40);  // narrow cells: text only
         if (wide) draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), false);
-        graphics_draw_text(ctx, s_sun_rise, fonts_get(FONT_SIZE_HEADER),
+        graphics_draw_text(ctx, s_sun_rise, font,
                            GRect(cell_x + (wide ? 10 : 0), y_line - l14,
                                  cell_w - (wide ? 10 : 0) - pad, 14 + l14),
                            GTextOverflowModeTrailingEllipsis,
@@ -162,7 +192,7 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
       {
         const bool wide = (cell_w >= 40);  // narrow cells: text only
         if (wide) draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), true);
-        graphics_draw_text(ctx, s_sun_set, fonts_get(FONT_SIZE_HEADER),
+        graphics_draw_text(ctx, s_sun_set, font,
                            GRect(cell_x + (wide ? 10 : 0), y_line - l14,
                                  cell_w - (wide ? 10 : 0) - pad, 14 + l14),
                            GTextOverflowModeTrailingEllipsis,
@@ -200,58 +230,109 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   }
 
   // Pack into rows: full = own row; halves pair up; lone trailing half
-  // centered. If the block overflows the content height (round displays run
-  // tight), a second pass demotes the full-width metrics (weather, wind) to
-  // half cells sharing one line — frees a whole 15px row. Rect displays keep
-  // their validated layout (narrow halves would truncate the temperature).
+  // centered. If the block overflows the content height, a second pass
+  // demotes the full-width metrics (weather, wind) to half cells sharing
+  // one line — frees a whole row. If it still overflows, the whole panel
+  // retries on the 12px metric face, then trailing rows are dropped.
   const int half = w / 2;
   int rows[6][2];            // {metric, cell_x}; metric -1 = none
   int row_w[6];              // cell width for the row's first cell
+  int row_w2[6];             // cell width for the row's second cell
   int row_count = 0;
+  int line_h = 14;           // 14px lines; retried at 12px if it overflows
   bool demoted = false;
-  for (int pass = 0; pass < 2; pass++) {
-    row_count = 0;
-    demoted = (pass > 0) && PBL_IF_ROUND_ELSE(1, 0);
-    for (int i = 0; i < n; ) {
-      if ((act[i] <= 1) && !demoted) {      // full-width metric
-        rows[row_count][0] = act[i];
-        rows[row_count][1] = -1;
-        row_w[row_count] = w;
-        row_count++;
-        i++;
-      } else {                              // half metric (or demoted full)
-        rows[row_count][0] = act[i];
-        rows[row_count][1] = -1;
-        row_w[row_count] = half;
-        if (i + 1 < n && (demoted || act[i + 1] > 1)) {  // pair with next
-          rows[row_count][1] = act[i + 1];
-          i += 2;
-        } else {
-          i++;                              // lone trailing half — centered
+  bool fits = false;
+  bool split_ok = true;      // wind pair split measured OK at this face
+  for (int fpass = 0; fpass < 2 && !fits; fpass++) {
+    for (int pass = 0; pass < 2 && !fits; pass++) {
+      row_count = 0;
+      split_ok = true;
+      demoted = (pass > 0);  // 2nd pass: fulls share half cells, frees a row
+      const GFont pf = fonts_get((fpass == 0) ? FONT_SIZE_HEADER
+                                              : FONT_SIZE_METRIC);
+      for (int i = 0; i < n; ) {
+        if ((act[i] <= 1) && !demoted) {      // full-width metric
+          rows[row_count][0] = act[i];
+          rows[row_count][1] = -1;
+          row_w[row_count] = w;
+          row_w2[row_count] = w;
+          row_count++;
+          i++;
+        } else {                              // half metric (or demoted full)
+          rows[row_count][0] = act[i];
+          rows[row_count][1] = -1;
+          row_w[row_count] = half;
+          if (i + 1 < n && (demoted || act[i + 1] > 1)) {  // pair with next
+            rows[row_count][1] = act[i + 1];
+            const int a = act[i], b = act[i + 1];
+            if (a == 1 || b == 1) {
+              // Wind pairs: measured split — the wind cell is sized on its
+              // text (icon first, then icon dropped) while the other cell
+              // keeps at least its own minimum (temp or half). If that is
+              // impossible, the pair falls back to 50/50 on the next pass.
+              const int wind_w = (int)graphics_text_layout_get_content_size(
+                  s_wind_short, pf, GRect(0, 0, w, 20),
+                  GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft).w;
+              const int other_min =
+                  (a == 0 || b == 0)
+                      ? (int)graphics_text_layout_get_content_size(
+                            s_temp_buf, pf, GRect(0, 0, w, 20),
+                            GTextOverflowModeTrailingEllipsis,
+                            GTextAlignmentLeft).w
+                      : half;
+              int wind_cell = 10 + wind_w;  // icon + text
+              int other_cell = w - 3 - wind_cell;
+              if (other_cell < other_min) {
+                wind_cell = wind_w;         // wind icon dropped
+                other_cell = w - 3 - wind_cell;
+              }
+              if (other_cell < other_min) {
+                split_ok = false;  // retry on the next font pass
+              } else if (a == 1) {
+                row_w[row_count] = wind_cell + 3;  // left pad rides along
+                row_w2[row_count] = other_cell;
+              } else {
+                row_w[row_count] = other_cell;
+                row_w2[row_count] = wind_cell;
+              }
+            }
+            i += 2;
+          } else {
+            i++;                              // lone trailing half — centered
+          }
+          row_count++;
         }
-        row_count++;
       }
+      fits = split_ok && (row_count * line_h + (row_count - 1) <= ch);
     }
-    const int block = row_count * 14 + (row_count - 1);
-    if (block <= ch) break;                 // fits
+    if (!fits) line_h = 12;  // retry packed with the 12px metric face
+  }
+  if (!fits && row_count > 1) {
+    // Last resort: drop trailing rows until it fits
+    while (row_count > 1 && row_count * line_h + (row_count - 1) > ch) {
+      row_count--;
+    }
   }
 
-  // Vertical block: one 14px line per row, 1px gaps, centered in content
-  const int line_h = 14;
+  // Vertical block: one line per row, 1px gaps, centered in content
   const int gap = 1;
   const int block_h = row_count * line_h + (row_count - 1) * gap;
   int y0 = y + (ch - block_h) / 2;
   if (y0 < y) y0 = y;
 
+  const GFont font = fonts_get((line_h == 12) ? FONT_SIZE_METRIC
+                                              : FONT_SIZE_HEADER);
+  const int l = (line_h == 12) ? FONT_LEADING_12 : FONT_LEADING_14;
   for (int r = 0; r < row_count; r++) {
     int y_line = y0 + r * (line_h + gap);
     int cell_x = x;
     if (rows[r][0] > 1 && rows[r][1] < 0) {
       cell_x = x + (w - half) / 2;        // lone half — centered
     }
-    prv_draw_metric(ctx, rows[r][0], cell_x, row_w[r], y_line, 3);
+    prv_draw_metric(ctx, rows[r][0], cell_x, row_w[r], y_line, 3, font, l);
     if (rows[r][1] >= 0) {
-      prv_draw_metric(ctx, rows[r][1], x + half, w - half, y_line, 0);
+      prv_draw_metric(ctx, rows[r][1], x + row_w[r], row_w2[r], y_line, 0,
+                      font, l);
     }
   }
 }
