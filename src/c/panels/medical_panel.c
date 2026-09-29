@@ -69,13 +69,18 @@ static void prv_fill_hr(int idx) {
 
 static void prv_fill_sum_int(int idx, const char *label,
                              const char *label_short, HealthMetric metric,
-                             HealthValue goal_fallback) {
+                             HealthValue goal_fallback, bool km) {
   MedSlot *s = &s_slots[idx];
   s->label = label;
   s->label_short = label_short;
   HealthValue v = health_service_sum_today(metric);
   if (v > 0) {
-    snprintf(s->value, sizeof(s->value), "%d", (int)v);
+    if (km) {
+      snprintf(s->value, sizeof(s->value), "%d.%dkm",
+               (int)v / 1000, ((int)v % 1000) / 100);
+    } else {
+      snprintf(s->value, sizeof(s->value), "%d", (int)v);
+    }
     prv_clamp_pct(s, (int)v * 100 / (int)prv_goal(metric, goal_fallback));
   } else {
     snprintf(s->value, sizeof(s->value), "---");
@@ -111,7 +116,8 @@ static void prv_fill_metric(int idx) {
       prv_fill_hr(idx);
       break;
     case 1:  // Steps — goal: daily average, fallback 10000
-      prv_fill_sum_int(idx, "STEPS", "ST", HealthMetricStepCount, 10000);
+      prv_fill_sum_int(idx, "STEPS", "ST", HealthMetricStepCount, 10000,
+                       false);
       break;
     case 2:  // Sleep
       prv_fill_duration(idx, "SLEEP", "SL", HealthMetricSleepSeconds,
@@ -119,28 +125,11 @@ static void prv_fill_metric(int idx) {
       break;
     case 3:  // Active kcal — goal: daily average, fallback 500
       prv_fill_sum_int(idx, "KCAL", "KC", HealthMetricActiveKCalories,
-                       MED_KCAL_GOAL_FALLBACK);
+                       MED_KCAL_GOAL_FALLBACK, false);
       break;
-    case 4:  // Distance (meters) — value in km
-      {
-        MedSlot *s = &s_slots[idx];
-        s->label = "KM";
-        s->label_short = "KM";
-        HealthValue meters = health_service_sum_today(
-            HealthMetricWalkedDistanceMeters);
-        if (meters > 0) {
-          snprintf(s->value, sizeof(s->value), "%d.%dkm",
-                   (int)meters / 1000, ((int)meters % 1000) / 100);
-          prv_clamp_pct(s, (int)meters * 100 /
-                            (int)prv_goal(HealthMetricWalkedDistanceMeters,
-                                          MED_DIST_GOAL_FALLBACK));
-        } else {
-          snprintf(s->value, sizeof(s->value), "---");
-          s->pct = 0;
-        }
-        s->fill = watchface_get_color_label();
-        s->value_col = watchface_get_color_value();
-      }
+    case 4:  // Distance — value in km, goal: daily average, fallback 5000 m
+      prv_fill_sum_int(idx, "KM", "KM", HealthMetricWalkedDistanceMeters,
+                       MED_DIST_GOAL_FALLBACK, true);
       break;
     case 5:  // Active time — goal fallback 1h
       prv_fill_duration(idx, "ACT", "AC", HealthMetricActiveSeconds,
@@ -148,7 +137,7 @@ static void prv_fill_metric(int idx) {
       break;
     case 6:  // Resting kcal
       prv_fill_sum_int(idx, "RKCAL", "RK", HealthMetricRestingKCalories,
-                       MED_RKCAL_GOAL_FALLBACK);
+                       MED_RKCAL_GOAL_FALLBACK, false);
       break;
     case 7:  // Deep sleep
       prv_fill_duration(idx, "DEEP", "DP", HealthMetricSleepRestfulSeconds,
@@ -157,9 +146,22 @@ static void prv_fill_metric(int idx) {
   }
 }
 
+// Collect active metric indices (fixed order, filtered by the user's mask).
+static int prv_active_slots(uint32_t mask, int max_count, int *out_idx) {
+  int n = 0;
+  for (int i = 0; i < MED_METRIC_COUNT && n < max_count; i++) {
+    if (mask & (1u << i)) out_idx[n++] = i;
+  }
+  return n;
+}
+
 static void prv_refresh_health(void) {
-  for (int i = 0; i < MED_METRIC_COUNT; i++) {
-    prv_fill_metric(i);
+  // Fill only the slots that can be drawn (max 4 rings in full mode,
+  // 2 in compact) — skips up to 4 health-service reads per minute.
+  int idx[MED_METRIC_COUNT];
+  const int n = prv_active_slots(watchface_get_med_metrics(), 4, idx);
+  for (int i = 0; i < n; i++) {
+    prv_fill_metric(idx[i]);
   }
 }
 
@@ -204,14 +206,6 @@ static void prv_draw_ring_cell(GContext *ctx, int x, int y, int rd,
                      GTextAlignmentCenter, NULL);
 }
 
-// Collect active metric indices (fixed order, filtered by the user's mask).
-static int prv_active_slots(uint32_t mask, int max_count, int *out_idx) {
-  int n = 0;
-  for (int i = 0; i < MED_METRIC_COUNT && n < max_count; i++) {
-    if (mask & (1u << i)) out_idx[n++] = i;
-  }
-  return n;
-}
 
 static void prv_update_proc(Layer *layer, GContext *ctx) {
   // Re-read health at draw time (cheap cached reads, no sensor wakeups):
