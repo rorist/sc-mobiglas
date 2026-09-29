@@ -137,28 +137,47 @@ bounds; only margins/gaps/min heights are fixed. `MARGIN = PBL_IF_ROUND_ELSE(24,
 
 - **Dispatch:** `PBL_DISPLAY_WIDTH` (flint 144 < 200 ≤ emery, gabbro 260) and
   `PBL_ROUND` / `PBL_IF_ROUND_ELSE` / `PBL_IF_BW_ELSE` — never hardcode screen dims
-- **Gabbro (round 260×260):** `layout.c` computes a **chord-aware width per row**
-  (`round_chord_width()` — custom integer sqrt, no libm: firmware ships no `sqrt`) plus
-  vertical edge insets (`ROUND_EDGE_INSET_TOP` / `ROUND_EDGE_INSET_BOTTOM_HERO` = 16px)
-  so the TIME and SYSTEMS panels stay inside the bezel. Mid rows keep full width;
-  any row narrower than full width is horizontally centered
-- **Gabbro time fonts:** logo active → `FONT_SIZE_TIME_SMALL` 40px (50px doesn't fit the
-  64px logo zone at chord width); hero ladder is adaptive: 80px only if content is
-  ≥ 170px wide AND the whole block (font + logo + date) fits vertically
-- **Flint (144×168 B&W):**
-  - Gauge track on 1-bit: `PBL_IF_BW_ELSE(GColorWhite, COLOR_GAUGE_BG)` in
-    `medical_panel.c` (#0055aa binarizes to black = invisible). Semantic colors
-    (WARN/ALERT/SAFE) intentionally kept as-is (user decision 2026-09-29)
-  - MEDICAL compact ladder (`prv_draw_ring_cell()`): ring ≥ 28px → value centered
-    inside + label below (emery/gabbro); ring < 28px → empty ring + value below,
-    no label (flint)
-  - ENVIRON narrow cells (`environ_panel.c`): halves drawn without icons if cell
-    < 40px; weather condition text skipped if cell < 88px (the icon still shows the
-    condition glyph); wind uses the short `"12km/h"` buffer if cell < 70px;
-    side-by-side (panel < 100px wide on a < 200px display) drops sunrise/sunset
-    (can't fit even icon-less)
-- **Regression guard:** emery/gabbro rendering must stay identical — all narrow/tier
-  thresholds are sized so emery/gabbro cells never hit them (verified via captures)
+- **Chrome per platform** (`panel_draw_chrome()` / `watchface.c`): emery/flint keep
+  bordered rounded panels on black; gabbro draws a global `COLOR_PANEL_BG` full-screen
+  background plus separator lines (H lines at inter-row gaps, V line between
+  MEDICAL/ENVIRON inset 4px from the H lines) on a dedicated separator layer — round
+  panels are borderless (user: no "boxed" look on round)
+- **Layout** (`layout.c`): flint uses MARGIN 2 / PANEL_GAP 1 with min heights
+  74/56/56/32 summing EXACTLY to the available height (162px, no surplus branch);
+  non-flint gives ALL surplus height to TIME (MED/ENV/SYS stay at minimum) so combo
+  screens get a bigger clock. Gabbro (round) computes a chord-aware width per row
+  (`round_chord_width()` — custom integer sqrt, no libm: firmware ships no `sqrt`)
+  plus vertical edge insets (16px) so TIME and SYSTEMS stay inside the bezel;
+  narrower rows are horizontally centered. `panel_content_rect()` = flint h−16 /
+  other h−20
+- **Time fonts** (`time_panel.c`): with date, ladder by content height: ≥89 → 72px,
+  ≥77 → 60px, ≥61 → 40px (SMALL), else 50px; no date → 80/72/60px. Hero (gate at
+  content ≥ 120px) shows MASSIVE 80px when the block fits with a 2px cushion, and
+  downscales or hides the logo otherwise. Flint: logo zone 36px (logos downscaled by
+  `prv_draw_bitmap_scaled()` — bpp-aware nearest-neighbor, ImageMagick logos decode
+  as 4-bit palette), time 40px, date 14px (`FONT_SIZE_HEADER`)
+- **ENVIRON** (`environ_panel.c`): wide panels (≥ 120px) use a left-aligned flow
+  layout (`prv_draw_flow()`): items measured by `prv_item_need_w()` and wrapped like
+  text — layout wraps on the strict width, +5 drawing slack guards against
+  `get_content_size` underestimates. Narrow panels pack pairs with MEASURED splits
+  (no blind 50/50); a k-fulls packer deploys WEATHER first, then WIND, each on its
+  own row only while vertical budget remains (pass k keeps the first k fulls —
+  priority weather > wind). Degradations: condition abbreviations
+  (CLR/CLD/FOG/RN/SNW/STM/N-A), wind short "12km/h", halves without icons < 40px.
+  The condition survives panel rebuilds via the `s_cond_raw` static (like temp/wind)
+- **MEDICAL** (`medical_panel.c`): ring ladder — ring ≥ 28px → value centered
+  inside + label below; ring < 28px (flint) → 2-letter label (BP/ST/SL/KC/KM/AC/RK/
+  DP) inside the ring + value below, both 12px `FONT_SIZE_METRIC`. Full mode caps
+  the ring count so every cell keeps ≥ 44px
+- **SYSTEMS**: COM sits left-aligned when BAT is hidden (solo COM)
+- **Fonts:** `FONT_RAJDHANI_12` (`FONT_SIZE_METRIC`, `FONT_LEADING_12` = 2) shared
+  by ENVIRON small rows and MEDICAL tier-B labels; flint also loads TIME_SMALL (40px)
+  for the logo mode
+- **1-bit gauge track:** `PBL_IF_BW_ELSE(GColorWhite, COLOR_GAUGE_BG)` in
+  `medical_panel.c` (#0055aa binarizes to black = invisible). Semantic colors
+  (WARN/ALERT/SAFE) are clamped to white on flint in watchface.h
+- **Regression guard:** emery rendering must stay pixel-identical — all narrow/tier
+  thresholds are sized so emery cells never hit them (verified via captures)
 
 ---
 
@@ -412,7 +431,7 @@ find, sed or ls for file operations unless Serena cannot do the task.
 pebble clean                        # clean build files
 pebble build                        # build for all targetPlatforms
 pebble install --emulator emery     # run in emulator
-pebble screenshot --emulator emery screenshot.png  # capture emulator screen as PNG
+pebble screenshot --no-open --emulator emery screenshot.png  # capture emulator screen as PNG
 pebble logs                         # stream watch logs
 pypkjs                              # local PKJS dev server
 ./debug.sh --list                   # 32-case debug harness (no recompile needed)
@@ -424,7 +443,7 @@ Build must pass with **0 warnings** from project code.
 > **Always run `pebble` commands alone** — never pipe it (`| grep`, `| tail`, `2>&1`).
 > Run bundle inspection (`grep -c ... build/pebble-js-app.js`, etc.) in separate commands.
 
-> **Visual validation:** after any visual change, run `pebble screenshot --emulator emery`
+> **Visual validation:** after any visual change, run `pebble screenshot --no-open --emulator emery`
 > and inspect the PNG to validate the rendering yourself before considering the task done.
 
 ---
