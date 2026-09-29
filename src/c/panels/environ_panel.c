@@ -7,6 +7,7 @@ static Layer *s_layer;
 static char s_temp_buf[12];     // "-12°C" or "--°C"
 static char s_cond_buf[12];     // "CLOUDY" or "---"
 static char s_wind_buf[16];     // "12 km/h WSW"
+static char s_wind_short[12];   // "12km/h" (narrow cells, no direction)
 static char s_hum_buf[8];       // "68%"
 static char s_uv_buf[8];        // "UV 11"
 
@@ -38,6 +39,11 @@ static void prv_format_temp(void) {
 }
 
 static void prv_format_wind(void) {
+  if (s_wind_speed < 0) {
+    snprintf(s_wind_short, sizeof(s_wind_short), "---");
+  } else {
+    snprintf(s_wind_short, sizeof(s_wind_short), "%dkm/h", (int)s_wind_speed);
+  }
   if (s_wind_speed < 0) {
     snprintf(s_wind_buf, sizeof(s_wind_buf), "---");
     return;
@@ -90,11 +96,13 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
     case 0:  // Weather: icon + condition (left) + temperature (right)
       draw_weather_icon(ctx, GPoint(cell_x, y_line + 2),
                         prv_cond_index(s_cond_buf));
-      graphics_draw_text(ctx, s_cond_buf, fonts_get(FONT_SIZE_HEADER),
-                         GRect(cell_x + 10, y_line - l14, cell_w - 10 - 32,
-                               14 + l14),
-                         GTextOverflowModeTrailingEllipsis,
-                         GTextAlignmentLeft, NULL);
+      if (cell_w >= 88) {  // narrower cells: condition glyph in icon only
+        graphics_draw_text(ctx, s_cond_buf, fonts_get(FONT_SIZE_HEADER),
+                           GRect(cell_x + 10, y_line - l14, cell_w - 10 - 32,
+                                 14 + l14),
+                           GTextOverflowModeTrailingEllipsis,
+                           GTextAlignmentLeft, NULL);
+      }
       graphics_draw_text(ctx, s_temp_buf, fonts_get(FONT_SIZE_HEADER),
                          GRect(cell_x + cell_w - 32, y_line - l14, 32,
                                14 + l14),
@@ -102,39 +110,58 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
                          GTextAlignmentRight, NULL);
       break;
     case 1:  // Wind
-      draw_wind_icon(ctx, GPoint(cell_x, y_line + 3));
-      graphics_draw_text(ctx, s_wind_buf, fonts_get(FONT_SIZE_HEADER),
-                         GRect(cell_x + 10, y_line - l14, cell_w - 10, 14 + l14),
-                         GTextOverflowModeTrailingEllipsis,
-                         GTextAlignmentLeft, NULL);
+      {
+        const char *wind_txt = (cell_w < 70) ? s_wind_short : s_wind_buf;
+        draw_wind_icon(ctx, GPoint(cell_x, y_line + 3));
+        graphics_draw_text(ctx, wind_txt, fonts_get(FONT_SIZE_HEADER),
+                           GRect(cell_x + 10, y_line - l14, cell_w - 10, 14 + l14),
+                           GTextOverflowModeTrailingEllipsis,
+                           GTextAlignmentLeft, NULL);
+      }
       break;
     case 2:  // Humidity
-      draw_drop_icon(ctx, GPoint(cell_x, y_line + 3));
-      graphics_draw_text(ctx, s_hum_buf, fonts_get(FONT_SIZE_HEADER),
-                         GRect(cell_x + 10, y_line - l14, cell_w - 10, 14 + l14),
-                         GTextOverflowModeTrailingEllipsis,
-                         GTextAlignmentLeft, NULL);
+      {
+        const bool wide = (cell_w >= 40);  // narrow cells: text only
+        if (wide) draw_drop_icon(ctx, GPoint(cell_x, y_line + 3));
+        graphics_draw_text(ctx, s_hum_buf, fonts_get(FONT_SIZE_HEADER),
+                           GRect(cell_x + (wide ? 10 : 0), y_line - l14,
+                                 cell_w - (wide ? 10 : 0), 14 + l14),
+                           GTextOverflowModeTrailingEllipsis,
+                           GTextAlignmentLeft, NULL);
+      }
       break;
     case 3:  // UV
-      draw_uv_icon(ctx, GPoint(cell_x, y_line + 3));
-      graphics_draw_text(ctx, s_uv_buf, fonts_get(FONT_SIZE_HEADER),
-                         GRect(cell_x + 10, y_line - l14, cell_w - 10, 14 + l14),
-                         GTextOverflowModeTrailingEllipsis,
-                         GTextAlignmentLeft, NULL);
+      {
+        const bool wide = (cell_w >= 40);  // narrow cells: text only
+        if (wide) draw_uv_icon(ctx, GPoint(cell_x, y_line + 3));
+        graphics_draw_text(ctx, s_uv_buf, fonts_get(FONT_SIZE_HEADER),
+                           GRect(cell_x + (wide ? 10 : 0), y_line - l14,
+                                 cell_w - (wide ? 10 : 0), 14 + l14),
+                           GTextOverflowModeTrailingEllipsis,
+                           GTextAlignmentLeft, NULL);
+      }
       break;
     case 4:  // Sunrise
-      draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), false);
-      graphics_draw_text(ctx, s_sun_rise, fonts_get(FONT_SIZE_HEADER),
-                         GRect(cell_x + 10, y_line - l14, cell_w - 10, 14 + l14),
-                         GTextOverflowModeTrailingEllipsis,
-                         GTextAlignmentLeft, NULL);
+      {
+        const bool wide = (cell_w >= 40);  // narrow cells: text only
+        if (wide) draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), false);
+        graphics_draw_text(ctx, s_sun_rise, fonts_get(FONT_SIZE_HEADER),
+                           GRect(cell_x + (wide ? 10 : 0), y_line - l14,
+                                 cell_w - (wide ? 10 : 0), 14 + l14),
+                           GTextOverflowModeTrailingEllipsis,
+                           GTextAlignmentLeft, NULL);
+      }
       break;
     case 5:  // Sunset
-      draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), true);
-      graphics_draw_text(ctx, s_sun_set, fonts_get(FONT_SIZE_HEADER),
-                         GRect(cell_x + 10, y_line - l14, cell_w - 10, 14 + l14),
-                         GTextOverflowModeTrailingEllipsis,
-                         GTextAlignmentLeft, NULL);
+      {
+        const bool wide = (cell_w >= 40);  // narrow cells: text only
+        if (wide) draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), true);
+        graphics_draw_text(ctx, s_sun_set, fonts_get(FONT_SIZE_HEADER),
+                           GRect(cell_x + (wide ? 10 : 0), y_line - l14,
+                                 cell_w - (wide ? 10 : 0), 14 + l14),
+                           GTextOverflowModeTrailingEllipsis,
+                           GTextAlignmentLeft, NULL);
+      }
       break;
   }
 }
@@ -156,10 +183,13 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // All ENVIRON lines are measured values, not labels
   graphics_context_set_text_color(ctx, watchface_get_color_value());
 
-  // Collect active metrics (fixed order)
+  // Collect active metrics (fixed order). Flint side-by-side (w < 100 on a
+  // 144px display): sunrise/sunset can't fit even icon-less — dropped.
+  const bool narrow = (PBL_DISPLAY_WIDTH < 200) && (w < 100);
   int act[6];
   int n = 0;
   for (int i = 0; i < 6; i++) {
+    if (narrow && (i == 4 || i == 5)) continue;
     if (mask & (1u << i)) act[n++] = i;
   }
 

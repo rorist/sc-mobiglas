@@ -6,6 +6,16 @@
 
 - **Weather cache** — returning to the watchface now shows the last weather data (up to 10 minutes old) instantly, instead of `---` placeholders while re-fetching; also fewer weather API requests
 
+### Changed
+
+- **Round displays (Pebble Time 2 Round)** — the layout now follows the screen shape: panels keep their corners inside the bezel, and the time picks the largest size that fits (up to 80px in hero mode)
+- **B&W displays (Pebble 2 Duo)** — MEDICAL and ENVIRON panels reworked for the smaller 144px screen: health values are read below the rings, weather rows are compact (sunrise/sunset hidden when panels share a row), and gauge tracks are now visible
+
+### Fixed
+
+- **Round displays** — panel corners, the "NAVCOMP" header, and the battery row were clipped by the round bezel
+- **B&W displays** — ring gauge tracks were invisible (drawn in a color that renders as black on 1-bit screens)
+
 ## [0.2.0] — 2026-09-28
 
 ### Added

@@ -133,6 +133,33 @@ bounds; only margins/gaps/min heights are fixed. `MARGIN = PBL_IF_ROUND_ELSE(24,
 - TIME alone → vertically centered on screen
 - Each panel's content auto-centers within its dynamic bounds
 
+### Multi-platform rendering (flint / emery / gabbro)
+
+- **Dispatch:** `PBL_DISPLAY_WIDTH` (flint 144 < 200 ≤ emery, gabbro 260) and
+  `PBL_ROUND` / `PBL_IF_ROUND_ELSE` / `PBL_IF_BW_ELSE` — never hardcode screen dims
+- **Gabbro (round 260×260):** `layout.c` computes a **chord-aware width per row**
+  (`round_chord_width()` — custom integer sqrt, no libm: firmware ships no `sqrt`) plus
+  vertical edge insets (`ROUND_EDGE_INSET_TOP` / `ROUND_EDGE_INSET_BOTTOM_HERO` = 16px)
+  so the TIME and SYSTEMS panels stay inside the bezel. Mid rows keep full width;
+  any row narrower than full width is horizontally centered
+- **Gabbro time fonts:** logo active → `FONT_SIZE_TIME_SMALL` 40px (50px doesn't fit the
+  64px logo zone at chord width); hero ladder is adaptive: 80px only if content is
+  ≥ 170px wide AND the whole block (font + logo + date) fits vertically
+- **Flint (144×168 B&W):**
+  - Gauge track on 1-bit: `PBL_IF_BW_ELSE(GColorWhite, COLOR_GAUGE_BG)` in
+    `medical_panel.c` (#0055aa binarizes to black = invisible). Semantic colors
+    (WARN/ALERT/SAFE) intentionally kept as-is (user decision 2026-09-29)
+  - MEDICAL compact ladder (`prv_draw_ring_cell()`): ring ≥ 28px → value centered
+    inside + label below (emery/gabbro); ring < 28px → empty ring + value below,
+    no label (flint)
+  - ENVIRON narrow cells (`environ_panel.c`): halves drawn without icons if cell
+    < 40px; weather condition text skipped if cell < 88px (the icon still shows the
+    condition glyph); wind uses the short `"12km/h"` buffer if cell < 70px;
+    side-by-side (panel < 100px wide on a < 200px display) drops sunrise/sunset
+    (can't fit even icon-less)
+- **Regression guard:** emery/gabbro rendering must stay identical — all narrow/tier
+  thresholds are sized so emery/gabbro cells never hit them (verified via captures)
+
 ---
 
 ## Config — Clay (phone) → bitmask (watch)
@@ -388,6 +415,8 @@ pebble install --emulator emery     # run in emulator
 pebble screenshot --emulator emery screenshot.png  # capture emulator screen as PNG
 pebble logs                         # stream watch logs
 pypkjs                              # local PKJS dev server
+./debug.sh --list                   # 32-case debug harness (no recompile needed)
+./debug.sh --emu flint --install all  # same harness on flint/gabbro (captures in debug/<emu>/)
 ```
 
 Build must pass with **0 warnings** from project code.

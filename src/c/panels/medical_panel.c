@@ -157,19 +157,27 @@ static void prv_refresh_health(void) {
 }
 
 // Draw one ring cell: ring gauge with value centered inside, label below.
+// Narrow rings (< 28px, flint): empty gauge + value below, no label.
 static void prv_draw_ring_cell(GContext *ctx, int x, int y, int rd,
                                int cell_w, const MedSlot *slot) {
+  // 1-bit displays: gauge track #0055aa binarizes to black = invisible
   draw_ring_gauge(ctx, GRect(x, y, rd, rd), slot->pct, 3,
-                  COLOR_GAUGE_BG, slot->fill);
+                  PBL_IF_BW_ELSE(GColorWhite, COLOR_GAUGE_BG), slot->fill);
+
+  const int l14 = FONT_LEADING_14;
+  if (rd < 28) {
+    // Narrow ring (flint): value below the gauge, no label — a 14px value
+    // inside a <28px ring clips the stroke and the label truncates.
+    graphics_context_set_text_color(ctx, slot->value_col);
+    graphics_draw_text(ctx, slot->value, fonts_get(FONT_SIZE_HEADER),
+                       GRect(x + (rd - cell_w) / 2, y + rd + 2 - l14,
+                             cell_w, 14 + l14),
+                       GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentCenter, NULL);
+    return;
+  }
 
   graphics_context_set_text_color(ctx, slot->value_col);
-  graphics_draw_text(ctx, slot->value, fonts_get(FONT_SIZE_HEADER),
-                     GRect(x, y + (rd - 14) / 2 - FONT_LEADING_14,
-                           rd, 14 + FONT_LEADING_14),
-                     GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentCenter, NULL);
-
-  graphics_context_set_text_color(ctx, watchface_get_color_label());
   graphics_draw_text(ctx, slot->label, fonts_get(FONT_SIZE_HEADER),
                      GRect(x + (rd - cell_w) / 2, y + rd + 2 - FONT_LEADING_14,
                            cell_w, 14 + FONT_LEADING_14),
