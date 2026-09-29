@@ -5,7 +5,7 @@
 #
 # Usage:
 #   ./debug.sh [--install] <case>   run one case (each capture opened with macOS open)
-#   ./debug.sh --all                iterate all cases + write debug/index.md
+#   ./debug.sh [--install] --all    iterate all cases + write debug/index.md
 #   ./debug.sh --emu <emu> ...      use another emulator (flint, gabbro; OUT debug/<emu>)
 #   ./debug.sh --list               list available cases
 #   ./debug.sh --reset              send default config and exit
@@ -20,6 +20,17 @@ done
 OUT=debug
 [ "$EMU" != "emery" ] && OUT="debug/$EMU"
 mkdir -p "$OUT"
+
+# global flag: --install (install once, before any case/batch runs)
+INSTALL=0
+while [ "$1" = "--install" ]; do
+  INSTALL=1
+  shift
+done
+
+if [ "$INSTALL" = "1" ]; then
+  pebble install --emulator "$EMU"
+fi
 
 # --- message keys (list-format numbering, see package.json) ---
 K_MED=10000        # 8 items: BPM STEPS SLEEP KCAL DIST ACT RKCAL DSLEEP
@@ -123,7 +134,7 @@ if [ "$1" = "--all" ]; then
     echo
     for c in "${CASES[@]}"; do
       run_case "$c"
-      sleep 0.3
+      sleep 0.6
       shot "$c"
       send_defaults
     done
@@ -134,17 +145,6 @@ if [ "$1" = "--all" ]; then
   exit 0
 fi
 
-# global flag: --install (install once, before the case runs)
-INSTALL=0
-while [ "$1" = "--install" ]; do
-  INSTALL=1
-  shift
-done
-
-if [ "$INSTALL" = "1" ]; then
-  pebble install --emulator "$EMU"
-fi
-
 if [ -z "$1" ]; then
   echo "usage: ./debug.sh [--emu emu] [--install] <case> | --all | --list | --reset"
   echo "cases: ./debug.sh --list"
@@ -152,6 +152,6 @@ if [ -z "$1" ]; then
 fi
 
 run_case "$1"
-sleep 0.3
+sleep 0.6
 shot "$1"
 send_defaults
