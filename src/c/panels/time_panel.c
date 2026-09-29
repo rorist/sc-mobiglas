@@ -13,20 +13,22 @@ static void prv_load_logo(void) {
     gbitmap_destroy(s_logo_bmp);
     s_logo_bmp = NULL;
   }
-  uint32_t res;
-  switch (watchface_get_logo()) {
-    case 1:  res = RESOURCE_ID_IMAGE_LOGO_AEGIS;       break;
-    case 2:  res = RESOURCE_ID_IMAGE_LOGO_ANVIL;       break;
-    case 3:  res = RESOURCE_ID_IMAGE_LOGO_CRUSADER;    break;
-    case 4:  res = RESOURCE_ID_IMAGE_LOGO_RSI;         break;
-    case 5:  res = RESOURCE_ID_IMAGE_LOGO_DRAKE;       break;
-    case 6:  res = RESOURCE_ID_IMAGE_LOGO_ORIGIN;      break;
-    case 7:  res = RESOURCE_ID_IMAGE_LOGO_STARCITIZEN; break;
-    case 8:  res = RESOURCE_ID_IMAGE_LOGO_FRONTIER;    break;
-    case 9:  res = RESOURCE_ID_IMAGE_LOGO_HEADHUNTERS; break;
-    default: return;
+  // Index 0 = logo 1 (AEGIS) .. index 8 = logo 9 (HEADHUNTERS)
+  static const uint32_t logo_res[9] = {
+    RESOURCE_ID_IMAGE_LOGO_AEGIS,
+    RESOURCE_ID_IMAGE_LOGO_ANVIL,
+    RESOURCE_ID_IMAGE_LOGO_CRUSADER,
+    RESOURCE_ID_IMAGE_LOGO_RSI,
+    RESOURCE_ID_IMAGE_LOGO_DRAKE,
+    RESOURCE_ID_IMAGE_LOGO_ORIGIN,
+    RESOURCE_ID_IMAGE_LOGO_STARCITIZEN,
+    RESOURCE_ID_IMAGE_LOGO_FRONTIER,
+    RESOURCE_ID_IMAGE_LOGO_HEADHUNTERS,
+  };
+  const uint8_t logo = watchface_get_logo();
+  if (logo >= 1 && logo <= 9) {
+    s_logo_bmp = gbitmap_create_with_resource(logo_res[logo - 1]);
   }
-  s_logo_bmp = gbitmap_create_with_resource(res);
 }
 
 // Nearest-neighbor downscale for 8-bit palette bitmaps: hero-mode logos too
@@ -81,6 +83,18 @@ static void prv_draw_bitmap_scaled(GContext *ctx, GBitmap *bmp, GRect dst) {
       graphics_fill_rect(ctx, GRect(dst.origin.x + x, dst.origin.y + y, 1, 1),
                          0, GCornerNone);
     }
+  }
+}
+
+// Draw the constructor logo opaque (palette transparency handled inside),
+// downscaled by prv_draw_bitmap_scaled when the rect differs from the
+// natural bitmap height.
+static void prv_draw_logo(GContext *ctx, GRect logo_rect) {
+  graphics_context_set_compositing_mode(ctx, GCompOpSet);
+  if (logo_rect.size.h == gbitmap_get_bounds(s_logo_bmp).size.h) {
+    graphics_draw_bitmap_in_rect(ctx, s_logo_bmp, logo_rect);
+  } else {
+    prv_draw_bitmap_scaled(ctx, s_logo_bmp, logo_rect);
   }
 }
 
@@ -262,12 +276,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     GRect logo_rect = GRect(
         content.origin.x + (content.size.w - logo_draw_w) / 2,
         y, logo_draw_w, logo_draw_h);
-    graphics_context_set_compositing_mode(ctx, GCompOpSet);
-    if (logo_draw_h == logo_bounds.size.h) {
-      graphics_draw_bitmap_in_rect(ctx, s_logo_bmp, logo_rect);
-    } else {
-      prv_draw_bitmap_scaled(ctx, s_logo_bmp, logo_rect);
-    }
+    prv_draw_logo(ctx, logo_rect);
     y += logo_draw_h;
   }
 
@@ -295,13 +304,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     int logo_y = content.origin.y
                + (content.size.h - logo_draw_h) / 2;
     if (logo_y < content.origin.y) logo_y = content.origin.y;
-    GRect logo_rect = GRect(logo_x, logo_y, logo_draw_w, logo_draw_h);
-    graphics_context_set_compositing_mode(ctx, GCompOpSet);
-    if (logo_draw_h == logo_bounds.size.h) {
-      graphics_draw_bitmap_in_rect(ctx, s_logo_bmp, logo_rect);
-    } else {
-      prv_draw_bitmap_scaled(ctx, s_logo_bmp, logo_rect);
-    }
+    prv_draw_logo(ctx, GRect(logo_x, logo_y, logo_draw_w, logo_draw_h));
   }
 }
 
