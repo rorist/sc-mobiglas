@@ -44,6 +44,22 @@ static uint8_t prv_apply_toggle(DictionaryIterator *iter, uint32_t key,
                            : (uint8_t)(config & ~bit);
 }
 
+// Merge a Clay checkboxgroup (one Int32 0/1 per item at consecutive keys)
+// into the persisted mask: absent items keep their previous state.
+static uint32_t prv_merge_mask(DictionaryIterator *iter, uint32_t base_key,
+                               int count, uint32_t old_mask) {
+  uint32_t merged = 0;
+  for (int i = 0; i < count; i++) {
+    Tuple *t = dict_find(iter, base_key + i);
+    if (t) {
+      if (t->value->int32) merged |= (1u << i);
+    } else {
+      merged |= (old_mask & (1u << i));
+    }
+  }
+  return merged;
+}
+
 static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
   // Weather: temperature + condition (both sent together by weather.js)
   Tuple *temp = dict_find(iter, MESSAGE_KEY_KEY_TEMP);
@@ -98,31 +114,29 @@ static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
 
   // Configurable text colors — Clay "color" sends Int32 (0xRRGGBB packed);
   // prv_color_from_tuple also tolerates a CString "#rrggbb"
-  Tuple *t;
-  if ((t = dict_find(iter, MESSAGE_KEY_KEY_COLOR_TIME))) {
-    GColor c = prv_color_from_tuple(t);
-    watchface_set_color_time(c);
-    storage_save_color_time(c);
-  }
-  if ((t = dict_find(iter, MESSAGE_KEY_KEY_COLOR_VALUE))) {
-    GColor c = prv_color_from_tuple(t);
-    watchface_set_color_value(c);
-    storage_save_color_value(c);
-  }
-  if ((t = dict_find(iter, MESSAGE_KEY_KEY_COLOR_LABEL))) {
-    GColor c = prv_color_from_tuple(t);
-    watchface_set_color_label(c);
-    storage_save_color_label(c);
-  }
-  if ((t = dict_find(iter, MESSAGE_KEY_KEY_COLOR_HEADER))) {
-    GColor c = prv_color_from_tuple(t);
-    watchface_set_color_header(c);
-    storage_save_color_header(c);
-  }
-  if ((t = dict_find(iter, MESSAGE_KEY_KEY_COLOR_WARN))) {
-    GColor c = prv_color_from_tuple(t);
-    watchface_set_color_warn(c);
-    storage_save_color_warn(c);
+    const struct {
+    uint32_t key;
+    void (*set)(GColor);
+    void (*save)(GColor);
+  } color_keys[] = {
+    { MESSAGE_KEY_KEY_COLOR_TIME, watchface_set_color_time,
+      storage_save_color_time },
+    { MESSAGE_KEY_KEY_COLOR_VALUE, watchface_set_color_value,
+      storage_save_color_value },
+    { MESSAGE_KEY_KEY_COLOR_LABEL, watchface_set_color_label,
+      storage_save_color_label },
+    { MESSAGE_KEY_KEY_COLOR_HEADER, watchface_set_color_header,
+      storage_save_color_header },
+    { MESSAGE_KEY_KEY_COLOR_WARN, watchface_set_color_warn,
+      storage_save_color_warn },
+  };
+  for (unsigned i = 0; i < sizeof(color_keys) / sizeof(color_keys[0]); i++) {
+    Tuple *t = dict_find(iter, color_keys[i].key);
+    if (t) {
+      GColor c = prv_color_from_tuple(t);
+      color_keys[i].set(c);
+      color_keys[i].save(c);
+    }
   }
 
   // Show date toggle (Int32 1/0) — hides the date line, frees space for time
@@ -135,46 +149,25 @@ static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
 
   // Per-panel metrics masks — Clay "checkboxgroup" sends one Int32 (0/1) per
   // item at consecutive keys (KEY_X_METRICS + i)
-  uint32_t med_mask = watchface_get_med_metrics();
-  uint32_t new_med = 0;
-  for (uint32_t i = 0; i < 8; i++) {
-    Tuple *mt = dict_find(iter, MESSAGE_KEY_KEY_MED_METRICS + i);
-    if (mt) {
-      if (mt->value->int32) new_med |= (1u << i);
-    } else {
-      new_med |= (med_mask & (1u << i));  // absent item keeps old state
-    }
-  }
+    uint32_t med_mask = watchface_get_med_metrics();
+  uint32_t new_med = prv_merge_mask(iter, MESSAGE_KEY_KEY_MED_METRICS, 8,
+                                    med_mask);
   if (new_med != med_mask) {
     watchface_set_med_metrics(new_med);
     storage_save_med_metrics(new_med);
   }
 
   uint32_t env_mask = watchface_get_env_metrics();
-  uint32_t new_env = 0;
-  for (uint32_t i = 0; i < 6; i++) {
-    Tuple *et = dict_find(iter, MESSAGE_KEY_KEY_ENV_METRICS + i);
-    if (et) {
-      if (et->value->int32) new_env |= (1u << i);
-    } else {
-      new_env |= (env_mask & (1u << i));
-    }
-  }
+  uint32_t new_env = prv_merge_mask(iter, MESSAGE_KEY_KEY_ENV_METRICS, 6,
+                                    env_mask);
   if (new_env != env_mask) {
     watchface_set_env_metrics(new_env);
     storage_save_env_metrics(new_env);
   }
 
   uint32_t sys_mask = watchface_get_sys_metrics();
-  uint32_t new_sys = 0;
-  for (uint32_t i = 0; i < 2; i++) {
-    Tuple *st = dict_find(iter, MESSAGE_KEY_KEY_SYS_METRICS + i);
-    if (st) {
-      if (st->value->int32) new_sys |= (1u << i);
-    } else {
-      new_sys |= (sys_mask & (1u << i));
-    }
-  }
+  uint32_t new_sys = prv_merge_mask(iter, MESSAGE_KEY_KEY_SYS_METRICS, 2,
+                                    sys_mask);
   if (new_sys != sys_mask) {
     watchface_set_sys_metrics(new_sys);
     storage_save_sys_metrics(new_sys);
