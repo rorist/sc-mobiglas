@@ -10,6 +10,7 @@ typedef enum {
   FONT_SIZE_TIME_BIG,    // 60px — HH:MM extra-large (no logo)
   FONT_SIZE_TIME_HUGE,   // 72px — very tall TIME panel (no logo); flint: 48px
   FONT_SIZE_TIME_MASSIVE, // 80px — time-only hero mode / date hidden; flint: 48px
+  FONT_SIZE_TIME_SMALL,  // 40px — HH:MM with logo on round (chord-narrowed zone)
   FONT_SIZE_COUNT
 } FontSize;
 
@@ -41,3 +42,4 @@ GFont fonts_get(FontSize size);
 #define FONT_LEADING_72  11
 #define FONT_LEADING_80  12
 #endif
+#define FONT_LEADING_40  6   // 40px face (TIME_SMALL); same face/metrics on all platforms

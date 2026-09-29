@@ -37,6 +37,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
 
   GRect content = panel_content_rect(bounds);
   const bool date_on = watchface_get_show_date();
+  GRect logo_bounds = (s_logo_bmp != NULL) ? gbitmap_get_bounds(s_logo_bmp) : GRectZero;
 #if PBL_DISPLAY_WIDTH < 200
   // Flint (144px wide): logo + big time can't fit side by side — logo not
   // rendered, time uses the 48px font at full content width
@@ -48,16 +49,33 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
 #else
   const bool show_logo = (s_logo_bmp != NULL);
   // Hero mode = TIME is the only panel (tall content): time goes full-width
-  // at 80px with the logo centered below it
+  // with the logo centered below it; 80px only if width AND the full block
+  // (time + logo + date) fit the content, else step down to 72/60px
   const bool hero = content.size.h >= 150;
   FontSize time_font;
   int time_rect_h;
   if (hero) {
-    time_font = FONT_SIZE_TIME_MASSIVE;
-    time_rect_h = 76;
+    const int logo_h = show_logo ? 4 + logo_bounds.size.h : 0;
+    if (content.size.w >= 170 && 76 + logo_h + (date_on ? 21 : 0) <= content.size.h) {
+      time_font = FONT_SIZE_TIME_MASSIVE;
+      time_rect_h = 76;
+    } else if (68 + logo_h + (date_on ? 21 : 0) <= content.size.h) {
+      time_font = FONT_SIZE_TIME_HUGE;
+      time_rect_h = 68;
+    } else {
+      time_font = FONT_SIZE_TIME_BIG;
+      time_rect_h = 56;
+    }
   } else if (show_logo) {
+#ifdef PBL_ROUND
+    // Gabbro: the chord-narrowed time zone (~97px) cannot fit the 50px
+    // face ("04:44" = 115px) — use the 40px face instead
+    time_font = FONT_SIZE_TIME_SMALL;
+    time_rect_h = 40;
+#else
     time_font = FONT_SIZE_TIME;
     time_rect_h = 52;
+#endif
   } else if (date_on) {
     // Date takes 21px extra: 72px needs a 89px block
     time_font = (content.size.h >= 90) ? FONT_SIZE_TIME_HUGE : FONT_SIZE_TIME_BIG;
@@ -71,11 +89,10 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   }
   const int l_time = (time_font == FONT_SIZE_TIME_MASSIVE) ? FONT_LEADING_80
                    : (time_font == FONT_SIZE_TIME_HUGE) ? FONT_LEADING_72
+                   : (time_font == FONT_SIZE_TIME_SMALL) ? FONT_LEADING_40
                    : (time_font == FONT_SIZE_TIME) ? FONT_LEADING_50
                    : FONT_LEADING_60;
 #endif
-
-  GRect logo_bounds = show_logo ? gbitmap_get_bounds(s_logo_bmp) : GRectZero;
 
   // Vertical block: time (+ logo below in hero) (+ date) — centered
   int block_h = time_rect_h;
