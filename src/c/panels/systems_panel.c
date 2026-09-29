@@ -43,13 +43,15 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   if (y < content.origin.y) y = content.origin.y;
 
   GRect measure = GRect(content.origin.x, y - l14, content.size.w, line_h + l14);
+  const bool dots = (PBL_DISPLAY_WIDTH < 200);  // flint: icons -> dots
+  const int comm_ico_w = dots ? 2 : 8;
   const int icon_gap = 2;
   int com_w = 0;
   if (show_com) {
     GSize com_size = graphics_text_layout_get_content_size(
         s_com_buf, font, measure, GTextOverflowModeTrailingEllipsis,
         GTextAlignmentLeft);
-    com_w = 8 + icon_gap + com_size.w;
+    com_w = comm_ico_w + icon_gap + com_size.w;
   }
 
   // COM group: right of the battery bar when BAT is on, but alone on the
@@ -57,12 +59,17 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   int com_x = content.origin.x;
   if (show_bat) com_x += content.size.w - com_w;
   if (show_com) {
-    graphics_context_set_stroke_color(ctx, watchface_get_color_label());
-    draw_comm_icon(ctx, GPoint(com_x, y + 3));
+    if (dots) {
+      graphics_context_set_fill_color(ctx, watchface_get_color_label());
+      graphics_fill_rect(ctx, GRect(com_x, y + 6, 2, 2), 0, GCornerNone);
+    } else {
+      graphics_context_set_stroke_color(ctx, watchface_get_color_label());
+      draw_comm_icon(ctx, GPoint(com_x, y + 3));
+    }
     graphics_context_set_text_color(ctx, com_col);
     graphics_draw_text(ctx, s_com_buf, font,
-                       GRect(com_x + 8 + icon_gap, y - l14,
-                             com_w - 8 - icon_gap, line_h + l14),
+                       GRect(com_x + comm_ico_w + icon_gap, y - l14,
+                             com_w - comm_ico_w - icon_gap, line_h + l14),
                        GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft,
                        NULL);
   }

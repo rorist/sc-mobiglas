@@ -75,7 +75,8 @@ static void prv_draw_bitmap_scaled(GContext *ctx, GBitmap *bmp, GRect dst) {
       const int sx = x * sw / dst.size.w;
       if (sx < row_info.min_x || sx > row_info.max_x) continue;
       const GColor c = palette[prv_px_index(row_info.data, sx, bpp)];
-      if (c.a == 0) continue;
+      if (c.a == 0 || c.a == 1) continue;  // transparent / near-transparent
+      if (c.a == 2 && ((x + y) & 1)) continue;  // partial alpha: 50% dither
       graphics_context_set_fill_color(ctx, c);
       graphics_fill_rect(ctx, GRect(dst.origin.x + x, dst.origin.y + y, 1, 1),
                          0, GCornerNone);
@@ -129,15 +130,21 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     // 80px face as soon as the width allows it; the logo is downscaled
     // (>=20px kept) or hidden if there is no room, so the block always
     // fits the content (no bezel clip)
-    if (content.size.w >= 170 && 76 + 20 + (date_on ? 21 : 0) <= content.size.h) {
+    if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_MASSIVE) &&
+        76 + 20 + (date_on ? 21 : 0) <= content.size.h) {
       time_font = FONT_SIZE_TIME_MASSIVE;
       time_rect_h = 76;
-    } else if (68 + logo_h + (date_on ? 21 : 0) <= content.size.h) {
+    } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_HUGE) &&
+               68 + logo_h + (date_on ? 21 : 0) <= content.size.h) {
       time_font = FONT_SIZE_TIME_HUGE;
       time_rect_h = 68;
-    } else {
+    } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_BIG) &&
+               56 + logo_h + (date_on ? 21 : 0) <= content.size.h) {
       time_font = FONT_SIZE_TIME_BIG;
       time_rect_h = 56;
+    } else {
+      time_font = FONT_SIZE_TIME;
+      time_rect_h = 52;
     }
   } else if (show_logo) {
 #ifdef PBL_ROUND
@@ -152,13 +159,16 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   } else if (date_on) {
     // Date takes 21px extra: ladder 72px (block 89) / 60px (77) / 40px (61)
     // / 50px — short chord rows (gabbro) step down instead of clipping
-    if (content.size.h >= 89) {
+    if (content.size.h >= 89 &&
+        content.size.w >= prv_time_max_w(FONT_SIZE_TIME_HUGE)) {
       time_font = FONT_SIZE_TIME_HUGE;
       time_rect_h = 68;
-    } else if (content.size.h >= 77) {
+    } else if (content.size.h >= 77 &&
+               content.size.w >= prv_time_max_w(FONT_SIZE_TIME_BIG)) {
       time_font = FONT_SIZE_TIME_BIG;
       time_rect_h = 56;
-    } else if (content.size.h >= 61) {
+    } else if (content.size.h >= 61 &&
+               content.size.w >= prv_time_max_w(FONT_SIZE_TIME_SMALL)) {
       time_font = FONT_SIZE_TIME_SMALL;
       time_rect_h = 40;
     } else {
@@ -167,8 +177,13 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     }
   } else {
     // Date hidden: vertical space freed -> bigger time font
-    time_font = (content.size.h >= 76) ? FONT_SIZE_TIME_MASSIVE
-              : (content.size.h >= 68) ? FONT_SIZE_TIME_HUGE : FONT_SIZE_TIME_BIG;
+    time_font = (content.size.h >= 76 &&
+                 content.size.w >= prv_time_max_w(FONT_SIZE_TIME_MASSIVE))
+                    ? FONT_SIZE_TIME_MASSIVE
+                : (content.size.h >= 68 &&
+                   content.size.w >= prv_time_max_w(FONT_SIZE_TIME_HUGE))
+                        ? FONT_SIZE_TIME_HUGE
+                        : FONT_SIZE_TIME_BIG;
     time_rect_h = (time_font == FONT_SIZE_TIME_MASSIVE) ? 76
                 : (time_font == FONT_SIZE_TIME_HUGE) ? 68 : 56;
   }

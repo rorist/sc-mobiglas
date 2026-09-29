@@ -6,6 +6,7 @@
 static Layer *s_layer;
 static char s_temp_buf[12];     // "-12°C" or "--°C"
 static char s_cond_buf[12];     // "CLOUDY" or "---"
+static char s_cond_raw[12];     // raw condition, survives rebuilds (like s_last_temp_c)
 static char s_wind_buf[16];     // "12 km/h WSW"
 static char s_wind_short[12];   // "12km/h" (narrow cells, no direction)
 static char s_hum_buf[8];       // "68%"
@@ -92,9 +93,19 @@ static int prv_cond_index(const char *c) {
 // extra right inset (3px: left cell of a pair must not touch the next
 // icon; 0px: right/last cell, nothing follows). font/l: the metric face
 // (14px, or 12px when the panel runs tight) and its leading compensation.
+// Flint (1-bit): icons degrade to a 2x2 dot — a glyph-free primitive that
+// keeps narrow cells compact (user decision 2026-09-29)
+static void prv_draw_dot(GContext *ctx, GPoint p) {
+  graphics_context_set_fill_color(ctx, watchface_get_color_label());
+  graphics_fill_rect(ctx, GRect(p.x, p.y, 2, 2), 0, GCornerNone);
+}
+
 static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
                             int y_line, int pad, GFont font, int l) {
   const int l14 = l;
+  const bool dots = (PBL_DISPLAY_WIDTH < 200);  // flint: icons -> dots
+  const int iw = dots ? 4 : 10;      // icon+gap width (dot 2+2 vs icon 8+2)
+  const int wide_min = dots ? 34 : 40;
   switch (metric) {
     case 0: {  // Weather: icon + condition + temperature flowing left
       // Temperature is measured and always shown, flowing right after the
@@ -106,11 +117,15 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
       if (temp_w > cell_w) temp_w = cell_w;
       // Icon only when the full temp still fits after it — ultra-narrow
       // shared cells fall back to temp-only text
-      const bool wico = (cell_w >= 10 + temp_w);
-      const int ix = cell_x + (wico ? 10 : 0);
+      const bool wico = (cell_w >= iw + temp_w);
+      const int ix = cell_x + (wico ? iw : 0);
       if (wico) {
-        draw_weather_icon(ctx, GPoint(cell_x, y_line + 2),
-                          prv_cond_index(s_cond_buf));
+        if (dots) {
+          prv_draw_dot(ctx, GPoint(cell_x, y_line + 6));
+        } else {
+          draw_weather_icon(ctx, GPoint(cell_x, y_line + 2),
+                            prv_cond_index(s_cond_buf));
+        }
       }
       int tx = ix;  // default: right after the icon (or cell start)
       // Condition: full text if it fits before the temp, short form
@@ -118,7 +133,7 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
       // the condition now shows at any cell width
       static const char *const cond_short[7] = {
           "CLR", "CLD", "FOG", "RN", "SNW", "STM", "N-A" };
-      const int avail = cell_w - (wico ? 10 : 0) - temp_w - 4 - pad;
+      const int avail = cell_w - (wico ? iw : 0) - temp_w - 4 - pad;
       if (avail > 0) {
         const GRect cond_rect = GRect(ix, y_line - l14, avail, 14 + l14);
         const char *cond_txt = s_cond_buf;
@@ -146,55 +161,96 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
     }
     case 1:  // Wind
       {
-        const char *wind_txt = (cell_w < 70) ? s_wind_short : s_wind_buf;
-        draw_wind_icon(ctx, GPoint(cell_x, y_line + 3));
-        graphics_draw_text(ctx, wind_txt, font,
-                           GRect(cell_x + 10, y_line - l14, cell_w - 10 - pad,
-                                 14 + l14),
-                           GTextOverflowModeTrailingEllipsis,
-                           GTextAlignmentLeft, NULL);
+        // Full text (with direction) when the cell can hold it, short form
+        // otherwise; the icon rides along only when text + icon fit —
+        // ultra-narrow measured splits fall back to text only.
+        const int wfull = (int)graphics_text_layout_get_content_size(
+            s_wind_buf, font, GRect(0, 0, 200, 20),
+            GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft).w;
+        const int wshort = (int)graphics_text_layout_get_content_size(
+            s_wind_short, font, GRect(0, 0, 200, 20),
+            GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft).w;
+        const bool full = (cell_w >= iw + wfull);
+        const bool wico = full || (cell_w >= iw + wshort);
+        const char *wind_txt = full ? s_wind_buf : s_wind_short;
+        if (wico) {
+          if (dots) {
+            prv_draw_dot(ctx, GPoint(cell_x, y_line + 6));
+          } else {
+            draw_wind_icon(ctx, GPoint(cell_x, y_line + 3));
+          }
+        }
+        graphics_draw_text(
+            ctx, wind_txt, font,
+            GRect(cell_x + (wico ? iw : 0), y_line - l14,
+                  cell_w - (wico ? iw : 0) - pad, 14 + l14),
+            GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
       }
       break;
     case 2:  // Humidity
       {
-        const bool wide = (cell_w >= 40);  // narrow cells: text only
-        if (wide) draw_drop_icon(ctx, GPoint(cell_x, y_line + 3));
+        const bool wide = (cell_w >= wide_min);  // narrow cells: text only
+        if (wide) {
+          if (dots) {
+            prv_draw_dot(ctx, GPoint(cell_x, y_line + 6));
+          } else {
+            draw_drop_icon(ctx, GPoint(cell_x, y_line + 3));
+          }
+        }
         graphics_draw_text(ctx, s_hum_buf, font,
-                           GRect(cell_x + (wide ? 10 : 0), y_line - l14,
-                                 cell_w - (wide ? 10 : 0) - pad, 14 + l14),
+                           GRect(cell_x + (wide ? iw : 0), y_line - l14,
+                                 cell_w - (wide ? iw : 0) - pad, 14 + l14),
                            GTextOverflowModeTrailingEllipsis,
                            GTextAlignmentLeft, NULL);
       }
       break;
     case 3:  // UV
       {
-        const bool wide = (cell_w >= 40);  // narrow cells: text only
-        if (wide) draw_uv_icon(ctx, GPoint(cell_x, y_line + 3));
+        const bool wide = (cell_w >= wide_min);  // narrow cells: text only
+        if (wide) {
+          if (dots) {
+            prv_draw_dot(ctx, GPoint(cell_x, y_line + 6));
+          } else {
+            draw_uv_icon(ctx, GPoint(cell_x, y_line + 3));
+          }
+        }
         graphics_draw_text(ctx, s_uv_buf, font,
-                           GRect(cell_x + (wide ? 10 : 0), y_line - l14,
-                                 cell_w - (wide ? 10 : 0) - pad, 14 + l14),
+                           GRect(cell_x + (wide ? iw : 0), y_line - l14,
+                                 cell_w - (wide ? iw : 0) - pad, 14 + l14),
                            GTextOverflowModeTrailingEllipsis,
                            GTextAlignmentLeft, NULL);
       }
       break;
     case 4:  // Sunrise
       {
-        const bool wide = (cell_w >= 40);  // narrow cells: text only
-        if (wide) draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), false);
+        const bool wide = (cell_w >= wide_min);  // narrow cells: text only
+        if (wide) {
+          if (dots) {
+            prv_draw_dot(ctx, GPoint(cell_x, y_line + 6));
+          } else {
+            draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), false);
+          }
+        }
         graphics_draw_text(ctx, s_sun_rise, font,
-                           GRect(cell_x + (wide ? 10 : 0), y_line - l14,
-                                 cell_w - (wide ? 10 : 0) - pad, 14 + l14),
+                           GRect(cell_x + (wide ? iw : 0), y_line - l14,
+                                 cell_w - (wide ? iw : 0) - pad, 14 + l14),
                            GTextOverflowModeTrailingEllipsis,
                            GTextAlignmentLeft, NULL);
       }
       break;
     case 5:  // Sunset
       {
-        const bool wide = (cell_w >= 40);  // narrow cells: text only
-        if (wide) draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), true);
+        const bool wide = (cell_w >= wide_min);  // narrow cells: text only
+        if (wide) {
+          if (dots) {
+            prv_draw_dot(ctx, GPoint(cell_x, y_line + 6));
+          } else {
+            draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), true);
+          }
+        }
         graphics_draw_text(ctx, s_sun_set, font,
-                           GRect(cell_x + (wide ? 10 : 0), y_line - l14,
-                                 cell_w - (wide ? 10 : 0) - pad, 14 + l14),
+                           GRect(cell_x + (wide ? iw : 0), y_line - l14,
+                                 cell_w - (wide ? iw : 0) - pad, 14 + l14),
                            GTextOverflowModeTrailingEllipsis,
                            GTextAlignmentLeft, NULL);
       }
@@ -202,9 +258,87 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
   }
 }
 
+// Measured content width of one metric (icon + text) at the given face.
+// wide (solo flow layout): wind keeps its direction, weather reserves room
+// for the full condition text; narrow: degradation forms apply.
+static int prv_item_need_w(int metric, GFont pf, bool wide) {
+  const int iw = (PBL_DISPLAY_WIDTH < 200) ? 4 : 10;  // icon+gap width
+  const int min_wide = (PBL_DISPLAY_WIDTH < 200) ? 34 : 40;
+  if (metric == 0) {
+    const int temp_w = (int)graphics_text_layout_get_content_size(
+        s_temp_buf, pf, GRect(0, 0, 200, 20),
+        GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft).w;
+    if (!wide) return iw + temp_w + 7;  // +7: pair pad + measure underestimate
+    const int cond_w = (int)graphics_text_layout_get_content_size(
+        s_cond_buf, pf, GRect(0, 0, 200, 20),
+        GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft).w;
+    return iw + cond_w + 4 + temp_w + 2;
+  }
+  const char *txt = (metric == 1) ? (wide ? s_wind_buf : s_wind_short)
+                  : (metric == 2) ? s_hum_buf
+                  : (metric == 3) ? s_uv_buf
+                  : (metric == 4) ? s_sun_rise
+                                  : s_sun_set;
+  int wd = iw + (int)graphics_text_layout_get_content_size(
+                   txt, pf, GRect(0, 0, 200, 20),
+                   GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft)
+                   .w;
+  if (wide && wd < min_wide) {
+    wd = min_wide;  // keep the icon readable in flow layout
+  }
+  wd += wide ? 5 : 7;  // wide: ellipsis guard; narrow: pair pad + underestimate
+  return wd;
+}
+
+// Full-width solo layout: left-aligned flow — items are laid out in reading
+// order and wrap to the next line when the next one doesn't fit. Ladder:
+// 14px face, 12px face, then sunrise/sunset dropped as a last resort.
+static void prv_draw_flow(GContext *ctx, int x, int y, int w, int ch,
+                          const int *act, int n) {
+  for (int fpass = 0; fpass < 2; fpass++) {
+    const GFont pf =
+        fonts_get((fpass == 0) ? FONT_SIZE_HEADER : FONT_SIZE_METRIC);
+    const int line_h = (fpass == 0) ? 14 : 12;
+    const int l = (fpass == 0) ? FONT_LEADING_14 : FONT_LEADING_12;
+    for (int dpass = 0; dpass < 2; dpass++) {
+      int idx[6], ix[6], iw[6], irow[6];
+      int m = 0, rows = 1, cx = 0;
+      for (int i = 0; i < n; i++) {
+        if (dpass == 1 && (act[i] == 4 || act[i] == 5)) continue;
+        int wd = prv_item_need_w(act[i], pf, true);
+        if (wd > w) wd = w;  // oversized single item takes its own line
+        // Layout wraps on the strict width: the +5 slack exists only for
+        // drawing (ellipsis guard), it must not trigger early wraps
+        const int step = wd - 5;
+        if (cx > 0 && cx + step > w) {  // wrap to the next line
+          rows++;
+          cx = 0;
+        }
+        idx[m] = act[i];
+        ix[m] = cx;
+        iw[m] = wd;
+        irow[m] = rows - 1;
+        m++;
+        cx += step + 8;
+      }
+      const int block_h = rows * line_h + (rows - 1);
+      if (block_h <= ch) {
+        const int y0 = y + (ch - block_h) / 2;
+        for (int k = 0; k < m; k++) {
+          prv_draw_metric(ctx, idx[k], x + ix[k], iw[k],
+                          y0 + irow[k] * (line_h + 1), 0, pf, l);
+        }
+        return;
+      }
+    }
+  }
+}
+
 // Metrics: 0 WEATHER (full), 1 WIND (full), 2 HUM (half), 3 UV (half),
-// 4 SUNRISE (half), 5 SUNSET (half). Full metrics take their own line; two
-// consecutive halves share a line; a lone trailing half is centered.
+// 4 SUNRISE (half), 5 SUNSET (half). Wide layout (panel solo, w >= 120):
+// left-aligned flow. Narrow layout (side-by-side panels): full metrics take
+// their own line when the height budget allows, halves pair up two per
+// line, lone halves sit left-aligned.
 static void prv_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
   panel_draw_header_full(ctx, bounds, "ENVIRON", COLOR_PRIMARY);
@@ -229,8 +363,16 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     if (mask & (1u << i)) act[n++] = i;
   }
 
-  // Pack into rows: full = own row; halves pair up; lone trailing half
-  // centered. If the block overflows the content height, a second pass
+  // Full-width solo layout (panel alone on its row, w >= 120): items flow
+  // left-aligned in reading order and wrap like words on a line.
+  if (w >= 120) {
+    prv_draw_flow(ctx, x, y, w, ch, act, n);
+    return;
+  }
+
+  // Narrow layout (side-by-side panels): full = own row when the height
+  // budget allows; halves pair up two per line; lone trailing half is
+  // left-aligned. If the block overflows the content height, a second pass
   // demotes the full-width metrics (weather, wind) to half cells sharing
   // one line — frees a whole row. If it still overflows, the whole panel
   // retries on the 12px metric face, then trailing rows are dropped.
@@ -240,18 +382,26 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   int row_w2[6];             // cell width for the row's second cell
   int row_count = 0;
   int line_h = 14;           // 14px lines; retried at 12px if it overflows
-  bool demoted = false;
   bool fits = false;
   bool split_ok = true;      // wind pair split measured OK at this face
   for (int fpass = 0; fpass < 2 && !fits; fpass++) {
-    for (int pass = 0; pass < 2 && !fits; pass++) {
+    for (int pass = 0; pass < 3 && !fits; pass++) {
       row_count = 0;
       split_ok = true;
-      demoted = (pass > 0);  // 2nd pass: fulls share half cells, frees a row
+      // pass k = number of full-width metrics that keep their own row,
+      // descending. WEATHER is kept first (the condition matters more than
+      // the wind direction); once every full is demoted the remaining
+      // passes only retry on the smaller face.
+      int nf = 0;  // active full-width metrics (WEATHER, WIND)
+      for (int i = 0; i < n; i++) {
+        if (act[i] <= 1) nf++;
+      }
+      const int keep = (pass < nf) ? nf - pass : 0;
       const GFont pf = fonts_get((fpass == 0) ? FONT_SIZE_HEADER
                                               : FONT_SIZE_METRIC);
       for (int i = 0; i < n; ) {
-        if ((act[i] <= 1) && !demoted) {      // full-width metric
+        const bool dem_m = (act[i] <= 1) && (keep < act[i] + 1);
+        if ((act[i] <= 1) && !dem_m) {        // full-width metric
           rows[row_count][0] = act[i];
           rows[row_count][1] = -1;
           row_w[row_count] = w;
@@ -262,39 +412,76 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
           rows[row_count][0] = act[i];
           rows[row_count][1] = -1;
           row_w[row_count] = half;
-          if (i + 1 < n && (demoted || act[i + 1] > 1)) {  // pair with next
+          if (i + 1 < n && keep < act[i + 1] + 1) {  // pair with next
             rows[row_count][1] = act[i + 1];
             const int a = act[i], b = act[i + 1];
             if (a == 1 || b == 1) {
-              // Wind pairs: measured split — the wind cell is sized on its
-              // text (icon first, then icon dropped) while the other cell
-              // keeps at least its own minimum (temp or half). If that is
-              // impossible, the pair falls back to 50/50 on the next pass.
+              // Wind pairs: measured split with an icon-first ladder —
+              // 1. strict split where BOTH cells keep their icon,
+              // 2. otherwise a retry on the smaller font face,
+              // 3. on the last face the wind icon is dropped rather than
+              //    failing the pack outright.
               const int wind_w = (int)graphics_text_layout_get_content_size(
                   s_wind_short, pf, GRect(0, 0, w, 20),
                   GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft).w;
-              const int other_min =
-                  (a == 0 || b == 0)
-                      ? (int)graphics_text_layout_get_content_size(
-                            s_temp_buf, pf, GRect(0, 0, w, 20),
-                            GTextOverflowModeTrailingEllipsis,
-                            GTextAlignmentLeft).w
-                      : half;
-              int wind_cell = 10 + wind_w;  // icon + text
+              const bool has_weather = (a == 0 || b == 0);
+              const int temp_w = has_weather
+                  ? (int)graphics_text_layout_get_content_size(
+                        s_temp_buf, pf, GRect(0, 0, w, 20),
+                        GTextOverflowModeTrailingEllipsis,
+                        GTextAlignmentLeft).w
+                  : 0;
+              // Icon-strict minimum for the other cell: icon + temp when the
+              // pair holds WEATHER (the condition degrades on its own), else
+              // icon + short text for half metrics.
+              const int other_ico_min = has_weather ? 10 + temp_w : 40;
+              int wind_cell = 10 + wind_w + 3;  // icon + text + small guard
               int other_cell = w - 3 - wind_cell;
-              if (other_cell < other_min) {
-                wind_cell = wind_w;         // wind icon dropped
+              if (other_cell >= other_ico_min) {
+                if (a == 1) {
+                  row_w[row_count] = wind_cell + 3;  // left pad rides along
+                  row_w2[row_count] = other_cell;
+                } else {
+                  row_w[row_count] = other_cell;
+                  row_w2[row_count] = wind_cell;
+                }
+              } else if (fpass == 1) {
+                // Last face: degrade — wind icon dropped; the other cell
+                // keeps at least its own minimum (temp or half need).
+                const int other_min = has_weather
+                    ? temp_w + 5
+                    : prv_item_need_w((a == 1) ? b : a, pf, false) - 4;
+                wind_cell = wind_w;  // wind icon dropped
                 other_cell = w - 3 - wind_cell;
-              }
-              if (other_cell < other_min) {
-                split_ok = false;  // retry on the next font pass
-              } else if (a == 1) {
-                row_w[row_count] = wind_cell + 3;  // left pad rides along
-                row_w2[row_count] = other_cell;
+                if (other_cell < other_min) {
+                  split_ok = false;  // retry on the next font pass
+                } else if (a == 1) {
+                  row_w[row_count] = wind_cell + 3;  // left pad rides along
+                  row_w2[row_count] = other_cell;
+                } else {
+                  row_w[row_count] = other_cell;
+                  row_w2[row_count] = wind_cell;
+                }
               } else {
-                row_w[row_count] = other_cell;
-                row_w2[row_count] = wind_cell;
+                split_ok = false;  // retry on the smaller font face
               }
+            } else {
+              // Other pairs: measured split — the first cell takes its
+              // needed width, the second gets the remainder; 50/50 only
+              // when neither order leaves both texts readable.
+              int c1 = prv_item_need_w(a, pf, false);
+              int c2 = w - c1;
+              const int need2 = prv_item_need_w(b, pf, false);
+              if (c2 < need2) {
+                c2 = need2;
+                c1 = w - need2;
+              }
+              if (c1 < 10) {
+                c1 = half;
+                c2 = w - half;
+              }
+              row_w[row_count] = c1;
+              row_w2[row_count] = c2;
             }
             i += 2;
           } else {
@@ -325,15 +512,21 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   const int l = (line_h == 12) ? FONT_LEADING_12 : FONT_LEADING_14;
   for (int r = 0; r < row_count; r++) {
     int y_line = y0 + r * (line_h + gap);
-    int cell_x = x;
-    if (rows[r][0] > 1 && rows[r][1] < 0) {
-      cell_x = x + (w - half) / 2;        // lone half — centered
-    }
-    prv_draw_metric(ctx, rows[r][0], cell_x, row_w[r], y_line, 3, font, l);
+    prv_draw_metric(ctx, rows[r][0], x, row_w[r], y_line, 3, font, l);
     if (rows[r][1] >= 0) {
       prv_draw_metric(ctx, rows[r][1], x + row_w[r], row_w2[r], y_line, 0,
                       font, l);
     }
+  }
+}
+
+// Rebuild s_cond_buf from the raw condition ("---" until first receipt) —
+// called on create/rebuild so the weather condition survives config changes
+static void prv_format_cond(void) {
+  if (s_cond_raw[0] == '\0') {
+    snprintf(s_cond_buf, sizeof(s_cond_buf), "---");
+  } else {
+    snprintf(s_cond_buf, sizeof(s_cond_buf), "%s", s_cond_raw);
   }
 }
 
@@ -343,7 +536,7 @@ Layer *environ_panel_create(GRect bounds) {
 
   // Keep s_last_temp_c across rebuilds so config changes re-display last data
   prv_format_temp();
-  snprintf(s_cond_buf, sizeof(s_cond_buf), "---");
+  prv_format_cond();
   prv_format_wind();
   prv_format_humuv();
   prv_format_sun();
@@ -362,8 +555,8 @@ void environ_panel_set_weather(int8_t temp_c, const char *condition) {
   s_last_temp_c = temp_c;
   prv_format_temp();
   if (condition) {
-    strncpy(s_cond_buf, condition, sizeof(s_cond_buf) - 1);
-    s_cond_buf[sizeof(s_cond_buf) - 1] = '\0';
+    snprintf(s_cond_raw, sizeof(s_cond_raw), "%s", condition);
+    prv_format_cond();
   }
   if (s_layer) layer_mark_dirty(s_layer);
 }
