@@ -9,11 +9,22 @@
 // Shared panel drawing helpers
 // ---------------------------------------------------------------------------
 
-// Draw the full panel chrome: fill + border + corner accents
+// Draw the full panel chrome: fill + border on rectangular displays
+// (emery/flint). On round (gabbro) the background is drawn once by the root
+// layer and separators structure the layout — per-panel chrome is a no-op
+// (headers are drawn separately).
+#ifdef PBL_ROUND
+static inline void panel_draw_chrome(GContext *ctx, GRect bounds, GColor color) {
+  (void)ctx;
+  (void)bounds;
+  (void)color;
+}
+#else
 static inline void panel_draw_chrome(GContext *ctx, GRect bounds, GColor color) {
   draw_panel_fill(ctx, bounds, COLOR_PANEL_BG);
   draw_panel_border(ctx, bounds, color);
 }
+#endif
 
 // Draw chrome + header label (fill, border, accents, accent bar, title)
 // color = chrome/border color; header text uses configurable header color

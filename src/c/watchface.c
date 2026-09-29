@@ -24,20 +24,61 @@ static GColor s_color_label = COLOR_LABEL_DEFAULT;
 static GColor s_color_header = COLOR_HEADER_DEFAULT;
 static GColor s_color_warn = COLOR_WARN_DEFAULT;
 
+// Round chrome (gabbro): the background is drawn once by the root layer;
+// this top layer adds the cyan separators — horizontal lines between rows
+// (the bezel clips the ends) and a vertical delimiter between MEDICAL and
+// ENVIRON, inset 2px from the horizontal lines (never on the outer edges).
+#ifdef PBL_ROUND
+static Layer *s_sep_layer;
+static LayoutInfo s_layout;
+static void prv_sep_update_proc(Layer *layer, GContext *ctx) {
+  (void)layer;
+  graphics_context_set_stroke_color(ctx, COLOR_PRIMARY);
+  const GRect t = s_layout.rects[PANEL_TIME];
+  const bool has_med = s_layout.visible[PANEL_MEDICAL];
+  const bool has_env = s_layout.visible[PANEL_ENVIRON];
+  const bool has_mid = has_med || has_env;
+  const bool has_sys = s_layout.visible[PANEL_SYSTEMS];
+  const int full_w = PBL_DISPLAY_WIDTH;
+
+  if (has_mid || has_sys) {
+    const int y = t.origin.y + t.size.h + PANEL_GAP / 2;
+    graphics_draw_line(ctx, GPoint(0, y), GPoint(full_w - 1, y));
+  }
+  if (has_mid && has_sys) {
+    const GRect m = has_med ? s_layout.rects[PANEL_MEDICAL]
+                            : s_layout.rects[PANEL_ENVIRON];
+    const int y = m.origin.y + m.size.h + PANEL_GAP / 2;
+    graphics_draw_line(ctx, GPoint(0, y), GPoint(full_w - 1, y));
+  }
+  if (has_med && has_env) {
+    const GRect m = s_layout.rects[PANEL_MEDICAL];
+    const int x = m.origin.x + m.size.w + PANEL_GAP / 2;
+    const int y_top = t.origin.y + t.size.h + PANEL_GAP / 2 + 4;
+    const int y_bot = has_sys ? m.origin.y + m.size.h + PANEL_GAP / 2 - 4
+                              : m.origin.y + m.size.h - 1;
+    graphics_draw_line(ctx, GPoint(x, y_top), GPoint(x, y_bot));
+  }
+}
+#endif
+
 // ---------------------------------------------------------------------------
 // Root layer — fills background
 // ---------------------------------------------------------------------------
 static void prv_root_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
+#ifdef PBL_ROUND
+  // Round (gabbro): full-screen panel-blue background; the separator layer
+  // structures the layout with cyan lines (bezel clips the line ends).
+  graphics_context_set_fill_color(ctx, COLOR_PANEL_BG);
+  graphics_fill_rect(ctx, bounds, 0, GCornerNone);
+#else
+  // Rect displays (emery/flint): plain black background; per-panel chrome
+  // (fill + border) lives in panel.h again. No bottom accent line — the
+  // SYSTEMS panel border already marks the bottom edge.
   graphics_context_set_fill_color(ctx, COLOR_BG);
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
-
-  // Bottom accent line (3px above bottom edge, any platform)
-  graphics_context_set_stroke_color(ctx, COLOR_PRIMARY);
-  graphics_draw_line(ctx, GPoint(bounds.origin.x, bounds.origin.y + bounds.size.h - 3),
-                      GPoint(bounds.origin.x + bounds.size.w - 1,
-                             bounds.origin.y + bounds.size.h - 3));
-
+#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -78,6 +119,19 @@ static void prv_rebuild_panels(void) {
     s_panel_layers[PANEL_SYSTEMS] = systems_panel_create(layout.rects[PANEL_SYSTEMS]);
     layer_add_child(s_root_layer, s_panel_layers[PANEL_SYSTEMS]);
   }
+
+#ifdef PBL_ROUND
+  // Separator layer on top of the background (destroyed/recreated with the
+  // panels so it stays above them)
+  s_layout = layout;
+  if (s_sep_layer) {
+    layer_remove_from_parent(s_sep_layer);
+    layer_destroy(s_sep_layer);
+  }
+  s_sep_layer = layer_create(s_screen_bounds);
+  layer_set_update_proc(s_sep_layer, prv_sep_update_proc);
+  layer_add_child(s_root_layer, s_sep_layer);
+#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -119,6 +173,13 @@ void watchface_destroy(void) {
   environ_panel_destroy();
   systems_panel_destroy();
   memset(s_panel_layers, 0, sizeof(s_panel_layers));
+
+#ifdef PBL_ROUND
+  if (s_sep_layer) {
+    layer_destroy(s_sep_layer);
+    s_sep_layer = NULL;
+  }
+#endif
 
   if (s_root_layer) {
     layer_destroy(s_root_layer);
