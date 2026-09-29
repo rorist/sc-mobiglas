@@ -219,8 +219,11 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
 
   int idx[MED_METRIC_COUNT];
   if (cw >= 120) {
-    // Full mode: one row of up to 4 active ring gauges
+    // Full mode: one row of up to 4 active ring gauges. Fewer, larger
+    // rings when cells get too narrow to stay readable (values/labels
+    // clip at ~34px cells on gabbro med-4; emery med-4 keeps its 4 rings)
     int n = prv_active_slots(mask, 4, idx);
+    while (n > 2 && cw / n < 44) n--;
     if (n == 0) return;
     const int cell_w = cw / n;
     int rd = ch - 17;

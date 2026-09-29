@@ -28,8 +28,8 @@ void fonts_init(void) {
   s_fonts[FONT_SIZE_TIME_MASSIVE] = fonts_load_custom_font(
       resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_80));
 #endif
-#ifdef PBL_ROUND
-  // Gabbro: logo mode uses the 40px face — the chord-narrowed time zone
+#if defined(PBL_ROUND) || (PBL_DISPLAY_WIDTH < 200)
+  // Gabbro + flint: logo mode uses the 40px face — the narrowed time zone
   // cannot fit the 50px face (see time_panel.c)
   s_fonts[FONT_SIZE_TIME_SMALL] = fonts_load_custom_font(
       resource_get_handle(RESOURCE_ID_FONT_RAJDHANI_40));

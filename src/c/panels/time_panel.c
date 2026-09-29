@@ -32,9 +32,32 @@ static void prv_load_logo(void) {
 // Nearest-neighbor downscale for 8-bit palette bitmaps: hero-mode logos too
 // tall for the 80px face. Transparent palette entries (alpha 0) are skipped;
 // anything else falls back to a plain draw.
+// Bits per pixel: 8 = one palette index per byte; palette formats pack
+// 2/4/8 indices per byte (ImageMagick exports decode as 4BitPalette)
+static int prv_bpp(GBitmapFormat fmt) {
+  switch (fmt) {
+    case GBitmapFormat8Bit:        return 8;
+    case GBitmapFormat4BitPalette: return 4;
+    case GBitmapFormat2BitPalette: return 2;
+    case GBitmapFormat1BitPalette: return 1;
+    default:                       return 0;
+  }
+}
+
+// Palette index of pixel sx (Pebble packs high bits first = leftmost pixel)
+static uint8_t prv_px_index(const uint8_t *data, int sx, int bpp) {
+  switch (bpp) {
+    case 8: return data[sx];
+    case 4: return (data[sx >> 1] >> ((sx & 1) ? 0 : 4)) & 0xF;
+    case 2: return (data[sx >> 2] >> (6 - (sx & 3) * 2)) & 0x3;
+    case 1: return (data[sx >> 3] >> (7 - (sx & 7))) & 0x1;
+  }
+  return 0;
+}
+
 static void prv_draw_bitmap_scaled(GContext *ctx, GBitmap *bmp, GRect dst) {
-  if (gbitmap_get_format(bmp) != GBitmapFormat8Bit
-      || dst.size.w <= 0 || dst.size.h <= 0) {
+  const int bpp = prv_bpp(gbitmap_get_format(bmp));
+  if (bpp == 0 || dst.size.w <= 0 || dst.size.h <= 0) {
     graphics_draw_bitmap_in_rect(ctx, bmp, dst);
     return;
   }
@@ -51,7 +74,7 @@ static void prv_draw_bitmap_scaled(GContext *ctx, GBitmap *bmp, GRect dst) {
     for (int x = 0; x < dst.size.w; x++) {
       const int sx = x * sw / dst.size.w;
       if (sx < row_info.min_x || sx > row_info.max_x) continue;
-      const GColor c = palette[row_info.data[sx]];
+      const GColor c = palette[prv_px_index(row_info.data, sx, bpp)];
       if (c.a == 0) continue;
       graphics_context_set_fill_color(ctx, c);
       graphics_fill_rect(ctx, GRect(dst.origin.x + x, dst.origin.y + y, 1, 1),
@@ -70,13 +93,14 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   const bool date_on = watchface_get_show_date();
   GRect logo_bounds = (s_logo_bmp != NULL) ? gbitmap_get_bounds(s_logo_bmp) : GRectZero;
 #if PBL_DISPLAY_WIDTH < 200
-  // Flint (144px wide): logo + big time can't fit side by side — logo not
-  // rendered, time uses the 48px font at full content width
+  // Flint (144px wide): the 36px logo zone + the 40px face fit side by
+  // side (worst "04:44" = 92px in a 92px zone); the date drops to 14px to
+  // keep the whole block inside the short content
   const bool hero = false;
-  const bool show_logo = false;
-  const FontSize time_font = FONT_SIZE_TIME_BIG;
-  const int time_rect_h = 40;  // 48px glyphs are 32px tall; 40 keeps the date visible
-  const int l_time = FONT_LEADING_60;
+  const bool show_logo = (s_logo_bmp != NULL);
+  const FontSize time_font = FONT_SIZE_TIME_SMALL;
+  const int time_rect_h = 40;
+  const int l_time = FONT_LEADING_40;
 #else
   const bool show_logo = (s_logo_bmp != NULL);
   // Hero mode = TIME is the only panel (tall content): time goes full-width
@@ -86,10 +110,10 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   FontSize time_font;
   int time_rect_h;
   if (hero) {
-    const int logo_h = show_logo ? 4 + logo_bounds.size.h : 0;
-    // 80px face as soon as the width allows it; an oversized logo is
-    // downscaled to fit (room for a >=20px logo) instead of stepping the
-    // whole face down to 72px
+    const int logo_h = show_logo ? 6 + logo_bounds.size.h : 0;
+    // 80px face as soon as the width allows it; the logo is downscaled
+    // (>=20px kept) or hidden if there is no room, so the block always
+    // fits the content (no bezel clip)
     if (content.size.w >= 170 && 76 + 20 + (date_on ? 21 : 0) <= content.size.h) {
       time_font = FONT_SIZE_TIME_MASSIVE;
       time_rect_h = 76;
@@ -111,9 +135,18 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     time_rect_h = 52;
 #endif
   } else if (date_on) {
-    // Date takes 21px extra: 72px needs a 89px block
-    time_font = (content.size.h >= 90) ? FONT_SIZE_TIME_HUGE : FONT_SIZE_TIME_BIG;
-    time_rect_h = (time_font == FONT_SIZE_TIME_HUGE) ? 68 : 56;
+    // Date takes 21px extra: ladder 72px (block 89) / 60px (77) / 50px (73)
+    // — short chord rows (gabbro) step down instead of clipping the date
+    if (content.size.h >= 89) {
+      time_font = FONT_SIZE_TIME_HUGE;
+      time_rect_h = 68;
+    } else if (content.size.h >= 77) {
+      time_font = FONT_SIZE_TIME_BIG;
+      time_rect_h = 56;
+    } else {
+      time_font = FONT_SIZE_TIME;
+      time_rect_h = 52;
+    }
   } else {
     // Date hidden: vertical space freed -> bigger time font
     time_font = (content.size.h >= 76) ? FONT_SIZE_TIME_MASSIVE
@@ -128,13 +161,37 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
                    : FONT_LEADING_60;
 #endif
 
-  // Effective hero logo rect: downscaled when the full-size logo doesn't
-  // fit under the 80px face (ratio preserved, nearest-neighbor)
+  // Logo zone: flint narrows it (logos downscaled into 36px)
+#if PBL_DISPLAY_WIDTH < 200
+  const int LOGO_ZONE_W = 36;
+  const int LOGO_GAP = 4;
+#else
+  const int LOGO_ZONE_W = 64;
+  const int LOGO_GAP = 6;
+#endif
+  // Effective logo rect: flint fits logos into the narrow zone; hero
+  // downscales into the leftover height under the face (2px cushion) or
+  // hides the logo entirely (ratio preserved, nearest-neighbor)
   int logo_draw_w = logo_bounds.size.w;
   int logo_draw_h = logo_bounds.size.h;
-  if (hero && show_logo && time_font == FONT_SIZE_TIME_MASSIVE) {
-    const int avail = content.size.h - time_rect_h - 4 - (date_on ? 21 : 0);
-    if (avail > 0 && avail < logo_draw_h) {
+#if PBL_DISPLAY_WIDTH < 200
+  if (show_logo) {
+    if (logo_draw_w > LOGO_ZONE_W) {
+      logo_draw_h = logo_draw_h * LOGO_ZONE_W / logo_draw_w;
+      logo_draw_w = LOGO_ZONE_W;
+    }
+    if (logo_draw_h > content.size.h) {
+      logo_draw_w = logo_draw_w * content.size.h / logo_draw_h;
+      logo_draw_h = content.size.h;
+    }
+  }
+#endif
+  if (hero && show_logo) {
+    const int avail = content.size.h - time_rect_h - 6 - (date_on ? 21 : 0) - 2;
+    if (avail < 20) {
+      logo_draw_w = 0;
+      logo_draw_h = 0;
+    } else if (avail < logo_draw_h) {
       logo_draw_w = logo_draw_w * avail / logo_draw_h;
       logo_draw_h = avail;
     }
@@ -142,15 +199,13 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
 
   // Vertical block: time (+ logo below in hero) (+ date) — centered
   int block_h = time_rect_h;
-  if (hero && show_logo) block_h += 4 + logo_draw_h;
-  if (date_on) block_h += 3 + 18;
+  if (hero && show_logo && logo_draw_h > 0) block_h += 6 + logo_draw_h;
+  if (date_on) block_h += 3 + (PBL_DISPLAY_WIDTH < 200 ? 14 : 18);
   int y_offset = content.origin.y + (content.size.h - block_h) / 2;
   if (y_offset < content.origin.y) y_offset = content.origin.y;
 
   // Logo zone on the right (normal mode only) — time AND date keep the
   // same position whatever logo is active
-  const int LOGO_ZONE_W = 64;
-  const int LOGO_GAP = 6;
   int time_w = content.size.w;
   if (show_logo && !hero) time_w -= LOGO_ZONE_W + LOGO_GAP;
 
@@ -163,8 +218,8 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
 
   // Cursor below the time: hero draws the logo there, then the date
   int y = y_offset + time_rect_h;
-  if (hero && show_logo) {
-    y += 4;
+  if (hero && show_logo && logo_draw_h > 0) {
+    y += 6;
     GRect logo_rect = GRect(
         content.origin.x + (content.size.w - logo_draw_w) / 2,
         y, logo_draw_w, logo_draw_h);
@@ -178,10 +233,19 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   }
 
   if (date_on) {
-    const int l18 = FONT_LEADING_18;
-    GRect date_rect = GRect(content.origin.x, y + 3 - l18, time_w, 18 + l18);
+#if PBL_DISPLAY_WIDTH < 200
+    const int date_h = 14;  // flint: 14px date keeps the block inside
+    const int l_date = FONT_LEADING_14;
+    const FontSize date_font = FONT_SIZE_HEADER;
+#else
+    const int date_h = 18;
+    const int l_date = FONT_LEADING_18;
+    const FontSize date_font = FONT_SIZE_VALUE;
+#endif
+    GRect date_rect = GRect(content.origin.x, y + 3 - l_date, time_w,
+                            date_h + l_date);
     graphics_context_set_text_color(ctx, watchface_get_color_value());
-    graphics_draw_text(ctx, s_date_buf, fonts_get(FONT_SIZE_VALUE), date_rect,
+    graphics_draw_text(ctx, s_date_buf, fonts_get(date_font), date_rect,
                        GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentCenter, NULL);
   }
@@ -190,15 +254,19 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // Vertically + horizontally centered in the fixed right zone.
   if (show_logo && !hero) {
     int logo_y = content.origin.y
-               + (content.size.h - logo_bounds.size.h) / 2;
+               + (content.size.h - logo_draw_h) / 2;
     if (logo_y < content.origin.y) logo_y = content.origin.y;
     GRect logo_rect = GRect(
         content.origin.x + content.size.w - LOGO_ZONE_W
-            + (LOGO_ZONE_W - logo_bounds.size.w) / 2,
+            + (LOGO_ZONE_W - logo_draw_w) / 2,
         logo_y,
-        logo_bounds.size.w, logo_bounds.size.h);
+        logo_draw_w, logo_draw_h);
     graphics_context_set_compositing_mode(ctx, GCompOpSet);
-    graphics_draw_bitmap_in_rect(ctx, s_logo_bmp, logo_rect);
+    if (logo_draw_h == logo_bounds.size.h) {
+      graphics_draw_bitmap_in_rect(ctx, s_logo_bmp, logo_rect);
+    } else {
+      prv_draw_bitmap_scaled(ctx, s_logo_bmp, logo_rect);
+    }
   }
 }
 

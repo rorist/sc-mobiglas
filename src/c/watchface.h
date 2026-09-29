@@ -29,8 +29,13 @@
 // Panel widths are derived at runtime from the screen bounds (layout.c);
 // only min heights and margins are fixed here.
 // ---------------------------------------------------------------------------
+#if PBL_DISPLAY_WIDTH < 200  // flint: tight 144x168 budget
+#define MARGIN        2
+#define PANEL_GAP     1
+#else
 #define MARGIN        PBL_IF_ROUND_ELSE(24, 3)
 #define PANEL_GAP     2
+#endif
 
 // ---------------------------------------------------------------------------
 // Panel IDs (bit positions match config bitmask bits 2-4)
@@ -43,13 +48,14 @@
 
 // ---------------------------------------------------------------------------
 // Panel minimum heights — used by layout engine
-// Flint's 168px height is tight: shrink rows so all panels fit (sum <= 152)
+// Flint's 168px height is tight: mins sum to the exact available height
+// (168 - 2*2 margins - 2*1 gaps = 162; surplus splits across rows)
 // ---------------------------------------------------------------------------
 #if PBL_DISPLAY_WIDTH < 200  // flint
-#define TIME_MIN_H     70  // 48px font + date + chrome
-#define MEDICAL_MIN_H  58  // header + 2 data rows
-#define ENVIRON_MIN_H  58  // header + 3 data rows
-#define SYSTEMS_MIN_H  24   // compact header (BAT inline) + battery bar
+#define TIME_MIN_H     74  // 48px face + 14px date + chrome (block 57 of 58)
+#define MEDICAL_MIN_H  56  // header + 2 compact rings
+#define ENVIRON_MIN_H  56  // header + 3 data rows
+#define SYSTEMS_MIN_H  32  // 14px line + chrome (74+56+56+32 = 162 = avail)
 #else  // emery / gabbro
 #define TIME_MIN_H     88  // 60px font + date + chrome
 #define MEDICAL_MIN_H  70  // header + 2 data rows

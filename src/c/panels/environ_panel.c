@@ -88,9 +88,11 @@ static int prv_cond_index(const char *c) {
 }
 
 // Draw one metric cell (icon + text) inside [cell_x, cell_w] on line y_line.
-// Full-width metrics get the whole row; half metrics get their half.
+// Full-width metrics get the whole row; half metrics get their half. pad =
+// extra right inset (3px: left cell of a pair must not touch the next
+// icon; 0px: right/last cell, nothing follows).
 static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
-                            int y_line) {
+                            int y_line, int pad) {
   const int l14 = FONT_LEADING_14;
   switch (metric) {
     case 0:  // Weather: icon + condition (left) + temperature (right)
@@ -104,11 +106,11 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
                            GTextAlignmentLeft, NULL);
       }
       // Very narrow cells (demoted weather): shrink the temp rect so it
-      // doesn't slide under the icon
+      // doesn't slide under the icon; pad keeps a gap to the next cell
       const int temp_w = (cell_w < 44) ? cell_w - 12 : 32;
       graphics_draw_text(ctx, s_temp_buf, fonts_get(FONT_SIZE_HEADER),
-                         GRect(cell_x + cell_w - temp_w, y_line - l14, temp_w,
-                               14 + l14),
+                         GRect(cell_x + cell_w - temp_w - pad, y_line - l14,
+                               temp_w, 14 + l14),
                          GTextOverflowModeTrailingEllipsis,
                          GTextAlignmentRight, NULL);
       break;
@@ -117,7 +119,8 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
         const char *wind_txt = (cell_w < 70) ? s_wind_short : s_wind_buf;
         draw_wind_icon(ctx, GPoint(cell_x, y_line + 3));
         graphics_draw_text(ctx, wind_txt, fonts_get(FONT_SIZE_HEADER),
-                           GRect(cell_x + 10, y_line - l14, cell_w - 10, 14 + l14),
+                           GRect(cell_x + 10, y_line - l14, cell_w - 10 - pad,
+                                 14 + l14),
                            GTextOverflowModeTrailingEllipsis,
                            GTextAlignmentLeft, NULL);
       }
@@ -128,7 +131,7 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
         if (wide) draw_drop_icon(ctx, GPoint(cell_x, y_line + 3));
         graphics_draw_text(ctx, s_hum_buf, fonts_get(FONT_SIZE_HEADER),
                            GRect(cell_x + (wide ? 10 : 0), y_line - l14,
-                                 cell_w - (wide ? 10 : 0), 14 + l14),
+                                 cell_w - (wide ? 10 : 0) - pad, 14 + l14),
                            GTextOverflowModeTrailingEllipsis,
                            GTextAlignmentLeft, NULL);
       }
@@ -139,7 +142,7 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
         if (wide) draw_uv_icon(ctx, GPoint(cell_x, y_line + 3));
         graphics_draw_text(ctx, s_uv_buf, fonts_get(FONT_SIZE_HEADER),
                            GRect(cell_x + (wide ? 10 : 0), y_line - l14,
-                                 cell_w - (wide ? 10 : 0), 14 + l14),
+                                 cell_w - (wide ? 10 : 0) - pad, 14 + l14),
                            GTextOverflowModeTrailingEllipsis,
                            GTextAlignmentLeft, NULL);
       }
@@ -150,7 +153,7 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
         if (wide) draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), false);
         graphics_draw_text(ctx, s_sun_rise, fonts_get(FONT_SIZE_HEADER),
                            GRect(cell_x + (wide ? 10 : 0), y_line - l14,
-                                 cell_w - (wide ? 10 : 0), 14 + l14),
+                                 cell_w - (wide ? 10 : 0) - pad, 14 + l14),
                            GTextOverflowModeTrailingEllipsis,
                            GTextAlignmentLeft, NULL);
       }
@@ -161,7 +164,7 @@ static void prv_draw_metric(GContext *ctx, int metric, int cell_x, int cell_w,
         if (wide) draw_sun_icon(ctx, GPoint(cell_x, y_line + 3), true);
         graphics_draw_text(ctx, s_sun_set, fonts_get(FONT_SIZE_HEADER),
                            GRect(cell_x + (wide ? 10 : 0), y_line - l14,
-                                 cell_w - (wide ? 10 : 0), 14 + l14),
+                                 cell_w - (wide ? 10 : 0) - pad, 14 + l14),
                            GTextOverflowModeTrailingEllipsis,
                            GTextAlignmentLeft, NULL);
       }
@@ -186,9 +189,9 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // All ENVIRON lines are measured values, not labels
   graphics_context_set_text_color(ctx, watchface_get_color_value());
 
-  // Collect active metrics (fixed order). Flint side-by-side (w < 100 on a
-  // 144px display): sunrise/sunset can't fit even icon-less — dropped.
-  const bool narrow = (PBL_DISPLAY_WIDTH < 200) && (w < 100);
+  // Collect active metrics (fixed order). Flint (any layout width): the
+  // short rows can't fit sunrise/sunset reliably — dropped.
+  const bool narrow = (PBL_DISPLAY_WIDTH < 200);
   int act[6];
   int n = 0;
   for (int i = 0; i < 6; i++) {
@@ -246,9 +249,9 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     if (rows[r][0] > 1 && rows[r][1] < 0) {
       cell_x = x + (w - half) / 2;        // lone half — centered
     }
-    prv_draw_metric(ctx, rows[r][0], cell_x, row_w[r], y_line);
+    prv_draw_metric(ctx, rows[r][0], cell_x, row_w[r], y_line, 3);
     if (rows[r][1] >= 0) {
-      prv_draw_metric(ctx, rows[r][1], x + half, w - half, y_line);
+      prv_draw_metric(ctx, rows[r][1], x + half, w - half, y_line, 0);
     }
   }
 }

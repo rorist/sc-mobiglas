@@ -51,6 +51,12 @@ static inline void panel_draw_header_with_right(GContext *ctx, GRect bounds,
 
 // Content area: the usable rect below the header (below underline at y+16)
 static inline GRect panel_content_rect(GRect bounds) {
+#if PBL_DISPLAY_WIDTH < 200
+  // Flint: short panels — no bottom pad, content must fit the tight height
+  return GRect(bounds.origin.x + 4, bounds.origin.y + 16,
+               bounds.size.w - 8, bounds.size.h - 16);
+#else
   return GRect(bounds.origin.x + 4, bounds.origin.y + 16,
                bounds.size.w - 8, bounds.size.h - 20);
+#endif
 }
