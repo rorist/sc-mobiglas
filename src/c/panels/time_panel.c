@@ -6,6 +6,14 @@ static Layer *s_layer;
 static char s_time_buf[6];   // "HH:MM\0"
 static char s_date_buf[16];  // "TUE 01 JUL\0"
 static GBitmap *s_logo_bmp;
+#if !PBL_BW
+// A2: cached downscaled copy — the layout rect is deterministic, so the
+// scale pass runs once per (logo, size) instead of every frame.
+// Color platforms only: 1-bit bitmaps have no transparent entry, so the
+// B&W path keeps the per-pixel scaling.
+static GBitmap *s_logo_scaled;
+static GSize s_logo_scaled_size;  // (0,0) = no cached copy yet
+#endif  // !PBL_BW
 
 // (Re)load the constructor logo bitmap matching watchface_get_logo()
 static void prv_load_logo(void) {
@@ -13,6 +21,14 @@ static void prv_load_logo(void) {
     gbitmap_destroy(s_logo_bmp);
     s_logo_bmp = NULL;
   }
+#if !PBL_BW
+  // A2: the scaled cache follows the logo — drop it on reload
+  if (s_logo_scaled) {
+    gbitmap_destroy(s_logo_scaled);
+    s_logo_scaled = NULL;
+  }
+  s_logo_scaled_size = GSizeZero;
+#endif  // !PBL_BW
   // Index 0 = logo 1 (AEGIS) .. index 8 = logo 9 (HEADHUNTERS)
   static const uint32_t logo_res[9] = {
     RESOURCE_ID_IMAGE_LOGO_AEGIS,
@@ -86,16 +102,79 @@ static void prv_draw_bitmap_scaled(GContext *ctx, GBitmap *bmp, GRect dst) {
   }
 }
 
-// Draw the constructor logo opaque (palette transparency handled inside),
-// downscaled by prv_draw_bitmap_scaled when the rect differs from the
-// natural bitmap height.
+#if !PBL_BW
+// Build the downscaled logo for the A2 cache: nearest-neighbor samples of
+// the source palette, transparent entries kept as GColorClear so drawing
+// the cached copy reproduces the previous per-pixel skip logic exactly.
+static GBitmap *prv_scale_logo(GBitmap *bmp, GSize size) {
+  const int bpp = prv_bpp(gbitmap_get_format(bmp));
+  GColor *palette = gbitmap_get_palette(bmp);
+  if (bpp == 0 || !palette || !gbitmap_get_data(bmp) ||
+      size.w <= 0 || size.h <= 0) {
+    return NULL;
+  }
+  const GRect src = gbitmap_get_bounds(bmp);
+  const int sw = src.size.w, sh = src.size.h;
+  GBitmap *out = gbitmap_create_blank(
+      size, PBL_IF_BW_ELSE(GBitmapFormat1Bit, GBitmapFormat8Bit));
+  if (!out) {
+    return NULL;
+  }
+  const int stride = gbitmap_get_bytes_per_row(out);
+  uint8_t *dst = gbitmap_get_data(out);
+  // 0 = GColorClear (8-bit) / white (1-bit): pixels the skip logic leaves
+  // untouched stay transparent (or white on B&W) in the cached copy
+  memset(dst, 0, stride * size.h);
+  for (int y = 0; y < size.h; y++) {
+    const int sy = y * sh / size.h;
+    const GBitmapDataRowInfo row_info = gbitmap_get_data_row_info(bmp, sy);
+    for (int x = 0; x < size.w; x++) {
+      const int sx = x * sw / size.w;
+      if (sx < row_info.min_x || sx > row_info.max_x) continue;
+      const GColor c = palette[prv_px_index(row_info.data, sx, bpp)];
+      if (c.a == 0 || c.a == 1) continue;  // transparent / near-transparent
+      if (c.a == 2 && ((x + y) & 1)) continue;  // partial alpha: 50% dither
+#if PBL_BW
+      if (!gcolor_equal(c, GColorWhite)) {
+        dst[y * stride + (x >> 3)] |= 0x80 >> (x & 7);
+      }
+#else
+      dst[y * stride + x] = c.argb;
+#endif
+    }
+  }
+  return out;
+}
+#endif  // !PBL_BW
+
+// Draw the constructor logo. At the natural bitmap height this is a plain
+// opaque draw (palette transparency handled inside). Otherwise the logo is
+// downscaled: from a cached per-(logo, size) copy on color platforms (A2),
+// per-pixel on B&W — 1-bit bitmaps have no transparent entry, so a cached
+// copy would paint a white box over the background.
 static void prv_draw_logo(GContext *ctx, GRect logo_rect) {
   graphics_context_set_compositing_mode(ctx, GCompOpSet);
   if (logo_rect.size.h == gbitmap_get_bounds(s_logo_bmp).size.h) {
     graphics_draw_bitmap_in_rect(ctx, s_logo_bmp, logo_rect);
-  } else {
-    prv_draw_bitmap_scaled(ctx, s_logo_bmp, logo_rect);
+    return;
   }
+#if PBL_BW
+  prv_draw_bitmap_scaled(ctx, s_logo_bmp, logo_rect);
+#else
+  if (!s_logo_scaled || s_logo_scaled_size.w != logo_rect.size.w ||
+      s_logo_scaled_size.h != logo_rect.size.h) {
+    if (s_logo_scaled) {
+      gbitmap_destroy(s_logo_scaled);
+    }
+    s_logo_scaled = prv_scale_logo(s_logo_bmp, logo_rect.size);
+    s_logo_scaled_size = logo_rect.size;
+  }
+  if (s_logo_scaled) {
+    graphics_draw_bitmap_in_rect(ctx, s_logo_scaled, logo_rect);
+  } else {
+    prv_draw_bitmap_scaled(ctx, s_logo_bmp, logo_rect);  // alloc fallback
+  }
+#endif  // PBL_BW
 }
 
 // Worst-case width of "04:44" per time face (Rajdhani digits scale at
@@ -323,6 +402,13 @@ Layer *time_panel_create(GRect bounds) {
 }
 
 void time_panel_destroy(void) {
+#if !PBL_BW
+  if (s_logo_scaled) {
+    gbitmap_destroy(s_logo_scaled);
+    s_logo_scaled = NULL;
+    s_logo_scaled_size = GSizeZero;
+  }
+#endif  // !PBL_BW
   if (s_logo_bmp) {
     gbitmap_destroy(s_logo_bmp);
     s_logo_bmp = NULL;
