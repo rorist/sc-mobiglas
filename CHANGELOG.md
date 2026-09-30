@@ -2,24 +2,29 @@
 
 ## [0.3.0] — 2026-09-30
 
+Full platform support: the round **Pebble Round 2** and the black & white
+**Pebble 2 Duo** now each get a layout tailored to their screen. The clock
+auto-sizes to the space it gets and weather is cached for an instant return
+to the watchface.
+
 ### Added
 
 - **Weather cache** — returning to the watchface now shows the last weather data (up to 10 minutes old) instantly, instead of `---` placeholders while re-fetching; also fewer weather API requests
 
 ### Changed
 
-- **Auto-sizing time** — the clock automatically grows when fewer panels are enabled: combo layouts like TIME + SYSTEMS now get hero-size time, and the largest font that fits is always chosen
-- **Round displays (Pebble Time 2 Round)** — the layout follows the screen shape: panels keep their corners inside the bezel, and a seamless background with thin separator lines replaces boxed panels
+- **Auto-sizing time** — the clock automatically grows when fewer panels are enabled: combo layouts like TIME + SYSTEMS now get hero-size time, and the largest font that fits is always chosen — the date shrinks first, the clock steps down last
+- **Round displays (Pebble Round 2)** — the layout follows the screen shape: panels keep their corners inside the bezel, and a seamless background with thin separator lines replaces boxed panels
 - **ENVIRON flow** — metrics are laid out left-aligned and wrap like text on wide panels; narrower panels pack them with measured widths, abbreviating conditions (CLR, RN, …) and wind speed when space is tight
 - **B&W displays (Pebble 2 Duo)** — MEDICAL and ENVIRON panels reworked for the smaller 144px screen: health values read below the rings, weather rows are compact (sunrise/sunset hidden when panels share a row), and info icons become small dots to free space for text
+- **B&W logo** — the constructor logo now fits beside the time on B&W watches (previously hidden), rendered as a clean white silhouette
 
 ### Fixed
 
 - **Round displays** — panel corners, the "NAVCOMP" header and the battery row were clipped by the bezel; the hero clock could also be truncated ("00:…") — the size ladder now guarantees the widest time fits
-- **Logos** — pre-baked per-platform assets replace runtime scaling: color logos are flattened on the panel background (crisp, pixel-deterministic — fixes the washed-out hero logo) and B&W logos render as clean silhouettes
+- **Logos** — pre-baked per-platform assets replace runtime scaling: color logos are flattened on the panel background (crisp, pixel-deterministic — fixes the washed-out hero logo) and B&W logos render as clean silhouettes; the logo is now centered between the time and the screen edge instead of hugging the right border
 - **ENVIRON packing** — the weather icon vanished from the top row when every metric was enabled, the wind arrow was hidden when humidity was disabled, and the weather row stayed compressed in a pair even when a full row was available; icons are now kept and full rows used whenever they fit
 - **B&W displays** — low-battery, communication and storm warnings were invisible (they rendered black on black) and gauge tracks were invisible too; both now render in white
-- **B&W logo** — a solid white square appeared instead of the logo beside the time
 
 ## [0.2.0] — 2026-09-28
 
