@@ -1,6 +1,6 @@
 # Changelog — sc-mobiglas
 
-## [0.3.0] — 2026-09-29
+## [0.3.0] — 2026-09-30
 
 ### Added
 
@@ -8,13 +8,20 @@
 
 ### Changed
 
-- **Round displays (Pebble Time 2 Round)** — the layout now follows the screen shape: panels keep their corners inside the bezel, and the time picks the largest size that fits (up to 80px in hero mode)
-- **B&W displays (Pebble 2 Duo)** — MEDICAL and ENVIRON panels reworked for the smaller 144px screen: health values are read below the rings, weather rows are compact (sunrise/sunset hidden when panels share a row), and gauge tracks are now visible
+- **Auto-sizing time** — the clock automatically grows when fewer panels are enabled: combo layouts like TIME + SYSTEMS now get hero-size time, and the largest font that fits is always chosen
+- **Round displays (Pebble Time 2 Round)** — the layout follows the screen shape: panels keep their corners inside the bezel, and a seamless background with thin separator lines replaces boxed panels
+- **ENVIRON flow** — metrics are laid out left-aligned and wrap like text on wide panels; narrower panels pack them with measured widths, abbreviating conditions (CLR, RN, …) and wind speed when space is tight
+- **B&W displays (Pebble 2 Duo)** — MEDICAL and ENVIRON panels reworked for the smaller 144px screen: health values read below the rings, weather rows are compact (sunrise/sunset hidden when panels share a row), and info icons become small dots to free space for text
 
 ### Fixed
 
-- **Round displays** — panel corners, the "NAVCOMP" header, and the battery row were clipped by the round bezel
-- **B&W displays** — ring gauge tracks were invisible (drawn in a color that renders as black on 1-bit screens)
+- **Round displays** — panel corners, the "NAVCOMP" header and the battery row were clipped by the bezel; the hero clock could also be truncated ("00:…") — the size ladder now guarantees the widest time fits
+- **Hero logo** — rendered as a washed-out white blob on color displays; partial transparency is now dithered so the logo stays crisp at any size
+- **ENVIRON packing** — the weather icon vanished from the top row when every metric was enabled, and the wind arrow was hidden when humidity was disabled; icons are now kept whenever they fit
+- **B&W displays** — low-battery, communication and storm warnings were invisible (they rendered black on black) and gauge tracks were invisible too; both now render in white
+- **B&W logo** — a solid white square appeared instead of the logo beside the time
+
+```
 
 ## [0.2.0] — 2026-09-28
 
@@ -56,3 +63,4 @@ Initial release.
 ### Notes
 
 - On B&W watches, colors render as white and the logo is hidden next to the time (screen too narrow).
+```
