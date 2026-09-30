@@ -317,9 +317,9 @@ config.js ───────┼─► index.js ──► AppMessage.send()
 - `draw_panel_header()` / `draw_panel_header_ex()` — accent bar + label + underline + ↗
 - `draw_battery_bar(ctx, bounds, percent, color)` — adaptive 3–6 segments
 - `draw_ring_gauge(ctx, box, percent, thickness, track, fill)` — circular gauge (MEDICAL)
-- `draw_weather_icon(ctx, origin, cond_idx)` — 8×8 holo; severity: RAIN/SNOW WARN ·
+- `draw_weather_icon(ctx, origin, cond_idx)` — 7×7 holo; severity: RAIN/SNOW WARN ·
   STORM ALERT · else label color
-- `draw_sun_icon()`, `draw_drop_icon()`, `draw_wind_icon()`, `draw_uv_icon()` — 8×8 holo
+- `draw_sun_icon()`, `draw_drop_icon()`, `draw_wind_icon()`, `draw_uv_icon()` — 7×7 holo
 - `draw_comm_icon(ctx, origin)` — antenna, stroke color set by the caller
 
 > Never add a function to `draw_utils.c` that duplicates logic already in `panel.h`.
