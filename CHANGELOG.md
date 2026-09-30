@@ -16,7 +16,7 @@
 ### Fixed
 
 - **Round displays** — panel corners, the "NAVCOMP" header and the battery row were clipped by the bezel; the hero clock could also be truncated ("00:…") — the size ladder now guarantees the widest time fits
-- **Hero logo** — rendered as a washed-out white blob on color displays; partial transparency is now dithered so the logo stays crisp at any size
+- **Logos** — pre-baked per-platform assets replace runtime scaling: color logos are flattened on the panel background (crisp, pixel-deterministic — fixes the washed-out hero logo) and B&W logos render as clean silhouettes
 - **ENVIRON packing** — the weather icon vanished from the top row when every metric was enabled, the wind arrow was hidden when humidity was disabled, and the weather row stayed compressed in a pair even when a full row was available; icons are now kept and full rows used whenever they fit
 - **B&W displays** — low-battery, communication and storm warnings were invisible (they rendered black on black) and gauge tracks were invisible too; both now render in white
 - **B&W logo** — a solid white square appeared instead of the logo beside the time

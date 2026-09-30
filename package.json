@@ -133,47 +133,110 @@
         {
           "type": "bitmap",
           "name": "IMAGE_LOGO_AEGIS",
-          "file": "images/logo_aegis.png"
+          "file": "images/logo_aegis.png",
+          "targetPlatforms": ["emery", "gabbro"]
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_AEGIS",
+          "file": "images/flint/logo_aegis.png",
+          "targetPlatforms": ["flint"]
         },
         {
           "type": "bitmap",
           "name": "IMAGE_LOGO_ANVIL",
-          "file": "images/logo_anvil.png"
+          "file": "images/logo_anvil.png",
+          "targetPlatforms": ["emery", "gabbro"]
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_ANVIL",
+          "file": "images/flint/logo_anvil.png",
+          "targetPlatforms": ["flint"]
         },
         {
           "type": "bitmap",
           "name": "IMAGE_LOGO_CRUSADER",
-          "file": "images/logo_crusader.png"
+          "file": "images/logo_crusader.png",
+          "targetPlatforms": ["emery", "gabbro"]
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_CRUSADER",
+          "file": "images/flint/logo_crusader.png",
+          "targetPlatforms": ["flint"]
         },
         {
           "type": "bitmap",
           "name": "IMAGE_LOGO_RSI",
-          "file": "images/logo_rsi.png"
+          "file": "images/logo_rsi.png",
+          "targetPlatforms": ["emery", "gabbro"]
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_RSI",
+          "file": "images/flint/logo_rsi.png",
+          "targetPlatforms": ["flint"]
         },
         {
           "type": "bitmap",
           "name": "IMAGE_LOGO_DRAKE",
-          "file": "images/logo_drake.png"
+          "file": "images/logo_drake.png",
+          "targetPlatforms": ["emery", "gabbro"]
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_DRAKE",
+          "file": "images/flint/logo_drake.png",
+          "targetPlatforms": ["flint"]
         },
         {
           "type": "bitmap",
           "name": "IMAGE_LOGO_ORIGIN",
-          "file": "images/logo_origin.png"
+          "file": "images/logo_origin.png",
+          "targetPlatforms": ["emery", "gabbro"]
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_ORIGIN",
+          "file": "images/flint/logo_origin.png",
+          "targetPlatforms": ["flint"]
         },
         {
           "type": "bitmap",
           "name": "IMAGE_LOGO_STARCITIZEN",
-          "file": "images/logo_starcitizen.png"
+          "file": "images/logo_starcitizen.png",
+          "targetPlatforms": ["emery", "gabbro"]
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_STARCITIZEN",
+          "file": "images/flint/logo_starcitizen.png",
+          "targetPlatforms": ["flint"]
         },
         {
           "type": "bitmap",
           "name": "IMAGE_LOGO_FRONTIER",
-          "file": "images/logo_frontier.png"
+          "file": "images/logo_frontier.png",
+          "targetPlatforms": ["emery", "gabbro"]
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_FRONTIER",
+          "file": "images/flint/logo_frontier.png",
+          "targetPlatforms": ["flint"]
         },
         {
           "type": "bitmap",
           "name": "IMAGE_LOGO_HEADHUNTERS",
-          "file": "images/logo_headhunters.png"
+          "file": "images/logo_headhunters.png",
+          "targetPlatforms": ["emery", "gabbro"]
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_LOGO_HEADHUNTERS",
+          "file": "images/flint/logo_headhunters.png",
+          "targetPlatforms": ["flint"]
         }
       ]
     }

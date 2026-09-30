@@ -6,14 +6,6 @@ static Layer *s_layer;
 static char s_time_buf[6];   // "HH:MM\0"
 static char s_date_buf[16];  // "TUE 01 JUL\0"
 static GBitmap *s_logo_bmp;
-#if !PBL_BW
-// A2: cached downscaled copy — the layout rect is deterministic, so the
-// scale pass runs once per (logo, size) instead of every frame.
-// Color platforms only: 1-bit bitmaps have no transparent entry, so the
-// B&W path keeps the per-pixel scaling.
-static GBitmap *s_logo_scaled;
-static GSize s_logo_scaled_size;  // (0,0) = no cached copy yet
-#endif  // !PBL_BW
 
 // (Re)load the constructor logo bitmap matching watchface_get_logo()
 static void prv_load_logo(void) {
@@ -21,14 +13,6 @@ static void prv_load_logo(void) {
     gbitmap_destroy(s_logo_bmp);
     s_logo_bmp = NULL;
   }
-#if !PBL_BW
-  // A2: the scaled cache follows the logo — drop it on reload
-  if (s_logo_scaled) {
-    gbitmap_destroy(s_logo_scaled);
-    s_logo_scaled = NULL;
-  }
-  s_logo_scaled_size = GSizeZero;
-#endif  // !PBL_BW
   // Index 0 = logo 1 (AEGIS) .. index 8 = logo 9 (HEADHUNTERS)
   static const uint32_t logo_res[9] = {
     RESOURCE_ID_IMAGE_LOGO_AEGIS,
@@ -47,136 +31,13 @@ static void prv_load_logo(void) {
   }
 }
 
-// Nearest-neighbor downscale for 8-bit palette bitmaps: hero-mode logos too
-// tall for the 80px face. Transparent palette entries (alpha 0) are skipped;
-// anything else falls back to a plain draw.
-// Bits per pixel: 8 = one palette index per byte; palette formats pack
-// 2/4/8 indices per byte (ImageMagick exports decode as 4BitPalette)
-static int prv_bpp(GBitmapFormat fmt) {
-  switch (fmt) {
-    case GBitmapFormat8Bit:        return 8;
-    case GBitmapFormat4BitPalette: return 4;
-    case GBitmapFormat2BitPalette: return 2;
-    case GBitmapFormat1BitPalette: return 1;
-    default:                       return 0;
-  }
-}
-
-// Palette index of pixel sx (Pebble packs high bits first = leftmost pixel)
-static uint8_t prv_px_index(const uint8_t *data, int sx, int bpp) {
-  switch (bpp) {
-    case 8: return data[sx];
-    case 4: return (data[sx >> 1] >> ((sx & 1) ? 0 : 4)) & 0xF;
-    case 2: return (data[sx >> 2] >> (6 - (sx & 3) * 2)) & 0x3;
-    case 1: return (data[sx >> 3] >> (7 - (sx & 7))) & 0x1;
-  }
-  return 0;
-}
-
-static void prv_draw_bitmap_scaled(GContext *ctx, GBitmap *bmp, GRect dst) {
-  const int bpp = prv_bpp(gbitmap_get_format(bmp));
-  if (bpp == 0 || dst.size.w <= 0 || dst.size.h <= 0) {
-    graphics_draw_bitmap_in_rect(ctx, bmp, dst);
-    return;
-  }
-  const GRect src = gbitmap_get_bounds(bmp);
-  GColor *palette = gbitmap_get_palette(bmp);
-  if (!palette) {
-    graphics_draw_bitmap_in_rect(ctx, bmp, dst);
-    return;
-  }
-  const int sw = src.size.w, sh = src.size.h;
-  for (int y = 0; y < dst.size.h; y++) {
-    const int sy = y * sh / dst.size.h;
-    const GBitmapDataRowInfo row_info = gbitmap_get_data_row_info(bmp, sy);
-    for (int x = 0; x < dst.size.w; x++) {
-      const int sx = x * sw / dst.size.w;
-      if (sx < row_info.min_x || sx > row_info.max_x) continue;
-      const GColor c = palette[prv_px_index(row_info.data, sx, bpp)];
-      if (c.a == 0 || c.a == 1) continue;  // transparent / near-transparent
-      graphics_context_set_fill_color(ctx, c);
-      graphics_fill_rect(ctx, GRect(dst.origin.x + x, dst.origin.y + y, 1, 1),
-                         0, GCornerNone);
-    }
-  }
-}
-
-#if !PBL_BW
-// Build the downscaled logo for the A2 cache: nearest-neighbor samples of
-// the source palette, transparent entries kept as GColorClear so drawing
-// the cached copy reproduces the previous per-pixel skip logic exactly.
-static GBitmap *prv_scale_logo(GBitmap *bmp, GSize size) {
-  const int bpp = prv_bpp(gbitmap_get_format(bmp));
-  GColor *palette = gbitmap_get_palette(bmp);
-  if (bpp == 0 || !palette || !gbitmap_get_data(bmp) ||
-      size.w <= 0 || size.h <= 0) {
-    return NULL;
-  }
-  const GRect src = gbitmap_get_bounds(bmp);
-  const int sw = src.size.w, sh = src.size.h;
-  GBitmap *out = gbitmap_create_blank(
-      size, PBL_IF_BW_ELSE(GBitmapFormat1Bit, GBitmapFormat8Bit));
-  if (!out) {
-    return NULL;
-  }
-  const int stride = gbitmap_get_bytes_per_row(out);
-  uint8_t *dst = gbitmap_get_data(out);
-  // 0 = GColorClear (8-bit) / white (1-bit): pixels the skip logic leaves
-  // untouched stay transparent (or white on B&W) in the cached copy
-  memset(dst, 0, stride * size.h);
-  for (int y = 0; y < size.h; y++) {
-    const int sy = y * sh / size.h;
-    const GBitmapDataRowInfo row_info = gbitmap_get_data_row_info(bmp, sy);
-    for (int x = 0; x < size.w; x++) {
-      const int sx = x * sw / size.w;
-      if (sx < row_info.min_x || sx > row_info.max_x) continue;
-      const GColor c = palette[prv_px_index(row_info.data, sx, bpp)];
-      if (c.a == 0 || c.a == 1) continue;  // transparent / near-transparent
-#if PBL_BW
-      if (!gcolor_equal(c, GColorWhite)) {
-        dst[y * stride + (x >> 3)] |= 0x80 >> (x & 7);
-      }
-#else
-      // Bake full alpha: partial-alpha pixels are kept solid (they are
-      // the bulk of the antialiased strokes) — keeping a == 2 would
-      // alpha-blend again on draw and wash the logo out, while 50%
-      // dithering them read as too transparent.
-      dst[y * stride + x] = c.argb | 0xC0;
-#endif
-    }
-  }
-  return out;
-}
-#endif  // !PBL_BW
-
-// Draw the constructor logo. At the natural bitmap height this is a plain
-// opaque draw (palette transparency handled inside). Otherwise the logo is
-// downscaled: from a cached per-(logo, size) copy on color platforms (A2),
-// per-pixel on B&W — 1-bit bitmaps have no transparent entry, so a cached
-// copy would paint a white box over the background.
+// Draw the constructor logo — always at the natural bitmap size: the
+// assets are pre-baked per platform (flattened on the panel background
+// for color displays, binary-alpha silhouettes for B&W), so a plain
+// opaque draw is pixel-exact everywhere.
 static void prv_draw_logo(GContext *ctx, GRect logo_rect) {
   graphics_context_set_compositing_mode(ctx, GCompOpSet);
-  if (logo_rect.size.h == gbitmap_get_bounds(s_logo_bmp).size.h) {
-    graphics_draw_bitmap_in_rect(ctx, s_logo_bmp, logo_rect);
-    return;
-  }
-#if PBL_BW
-  prv_draw_bitmap_scaled(ctx, s_logo_bmp, logo_rect);
-#else
-  if (!s_logo_scaled || s_logo_scaled_size.w != logo_rect.size.w ||
-      s_logo_scaled_size.h != logo_rect.size.h) {
-    if (s_logo_scaled) {
-      gbitmap_destroy(s_logo_scaled);
-    }
-    s_logo_scaled = prv_scale_logo(s_logo_bmp, logo_rect.size);
-    s_logo_scaled_size = logo_rect.size;
-  }
-  if (s_logo_scaled) {
-    graphics_draw_bitmap_in_rect(ctx, s_logo_scaled, logo_rect);
-  } else {
-    prv_draw_bitmap_scaled(ctx, s_logo_bmp, logo_rect);  // alloc fallback
-  }
-#endif  // PBL_BW
+  graphics_draw_bitmap_in_rect(ctx, s_logo_bmp, logo_rect);
 }
 
 // Worst-case width of "04:44" per time face (Rajdhani digits scale at
@@ -202,6 +63,9 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   GRect content = panel_content_rect(bounds);
   const bool date_on = watchface_get_show_date();
   GRect logo_bounds = (s_logo_bmp != NULL) ? gbitmap_get_bounds(s_logo_bmp) : GRectZero;
+  // Date height for the block layout: hero rungs may shrink it 18 -> 14px
+  // to fit the full logo; flint is fixed at 14px (hero never runs there)
+  int date_h_hero = 18;
 #if PBL_DISPLAY_WIDTH < 200
   // Flint (144px wide): the 36px logo zone + the 40px face fit side by
   // side (worst "04:44" = 92px in a 92px zone); the date drops to 14px to
@@ -226,24 +90,51 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   int time_rect_h;
   if (hero) {
     const int logo_h = show_logo ? 6 + logo_bounds.size.h : 0;
-    // 80px face as soon as the width allows it; each rung requires the
-    // FULL logo to fit below the time (logo_h = 6 + logo height), so the
-    // logo is never squeezed — the block steps down to 72/60px instead
+    // Each rung requires the FULL logo below the time (logo_h = 6 + logo
+    // height): the logo is never squeezed — the date first shrinks
+    // 18 -> 14px, then the face steps down; the final SMALL rung
+    // guarantees the block on short contents (gabbro TIME+SYSTEMS)
+    const int dp = date_on ? 21 : 0;   // date block at 18px
+    const int dps = date_on ? 17 : 0;  // date block at 14px
     if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_MASSIVE) &&
-        76 + logo_h + (date_on ? 21 : 0) <= content.size.h) {
+        76 + logo_h + dp <= content.size.h) {
       time_font = FONT_SIZE_TIME_MASSIVE;
       time_rect_h = 76;
     } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_HUGE) &&
-               68 + logo_h + (date_on ? 21 : 0) <= content.size.h) {
+               68 + logo_h + dp <= content.size.h) {
       time_font = FONT_SIZE_TIME_HUGE;
       time_rect_h = 68;
+    } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_HUGE) &&
+               68 + logo_h + dps <= content.size.h) {
+      time_font = FONT_SIZE_TIME_HUGE;
+      time_rect_h = 68;
+      date_h_hero = 14;
     } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_BIG) &&
-               56 + logo_h + (date_on ? 21 : 0) <= content.size.h) {
+               56 + logo_h + dp <= content.size.h) {
       time_font = FONT_SIZE_TIME_BIG;
       time_rect_h = 56;
-    } else {
+    } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_BIG) &&
+               56 + logo_h + dps <= content.size.h) {
+      time_font = FONT_SIZE_TIME_BIG;
+      time_rect_h = 56;
+      date_h_hero = 14;
+    } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME) &&
+               52 + logo_h + dp <= content.size.h) {
       time_font = FONT_SIZE_TIME;
       time_rect_h = 52;
+    } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME) &&
+               52 + logo_h + dps <= content.size.h) {
+      time_font = FONT_SIZE_TIME;
+      time_rect_h = 52;
+      date_h_hero = 14;
+    } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_SMALL) &&
+               40 + logo_h + dp <= content.size.h) {
+      time_font = FONT_SIZE_TIME_SMALL;
+      time_rect_h = 40;
+    } else {
+      time_font = FONT_SIZE_TIME_SMALL;
+      time_rect_h = 40;
+      date_h_hero = 14;
     }
   } else if (show_logo) {
 #ifdef PBL_ROUND
@@ -293,42 +184,34 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
                    : FONT_LEADING_60;
 #endif
 
-  // Logo scale cap: flint downscales logos into its narrow 36px zone
-#if PBL_DISPLAY_WIDTH < 200
-  const int LOGO_ZONE_W = 36;
-#endif
-  // Effective logo rect: flint fits logos into the narrow zone; hero
-  // downscales into the leftover height under the face (2px cushion) or
-  // hides the logo entirely (ratio preserved, nearest-neighbor)
+  // Effective logo rect: assets are pre-baked per platform (the flint
+  // silhouettes fit the 36px zone), so the natural bitmap size is always
+  // the draw size — an oversized asset means a stale file: hide it
+  // rather than paint outside the layout
   int logo_draw_w = logo_bounds.size.w;
   int logo_draw_h = logo_bounds.size.h;
 #if PBL_DISPLAY_WIDTH < 200
-  if (show_logo) {
-    if (logo_draw_w > LOGO_ZONE_W) {
-      logo_draw_h = logo_draw_h * LOGO_ZONE_W / logo_draw_w;
-      logo_draw_w = LOGO_ZONE_W;
-    }
-    if (logo_draw_h > content.size.h) {
-      logo_draw_w = logo_draw_w * content.size.h / logo_draw_h;
-      logo_draw_h = content.size.h;
-    }
+  const int LOGO_ZONE_W = 36;
+  if (show_logo &&
+      (logo_draw_w > LOGO_ZONE_W || logo_draw_h > content.size.h)) {
+    logo_draw_w = 0;
+    logo_draw_h = 0;
   }
 #endif
   if (hero && show_logo) {
-    const int avail = content.size.h - time_rect_h - 6 - (date_on ? 21 : 0) - 2;
-    if (avail < 20) {
+    const int avail =
+        content.size.h - time_rect_h - 6 - (date_on ? 3 + date_h_hero : 0) - 2;
+    if (avail < logo_draw_h) {
+      // pre-baked assets never scale — hide instead of squeezing
       logo_draw_w = 0;
       logo_draw_h = 0;
-    } else if (avail < logo_draw_h) {
-      logo_draw_w = logo_draw_w * avail / logo_draw_h;
-      logo_draw_h = avail;
     }
   }
 
   // Vertical block: time (+ logo below in hero) (+ date) — centered
   int block_h = time_rect_h;
   if (hero && show_logo && logo_draw_h > 0) block_h += 6 + logo_draw_h;
-  if (date_on) block_h += 3 + (PBL_DISPLAY_WIDTH < 200 ? 14 : 18);
+  if (date_on) block_h += 3 + (PBL_DISPLAY_WIDTH < 200 ? 14 : date_h_hero);
   int y_offset = content.origin.y + (content.size.h - block_h) / 2;
   if (y_offset < content.origin.y) y_offset = content.origin.y;
 
@@ -371,9 +254,10 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     const int l_date = FONT_LEADING_14;
     const FontSize date_font = FONT_SIZE_HEADER;
 #else
-    const int date_h = 18;
-    const int l_date = FONT_LEADING_18;
-    const FontSize date_font = FONT_SIZE_VALUE;
+    const int date_h = date_h_hero;  // 14 = hero shrunk it to fit
+    const int l_date = (date_h < 18) ? FONT_LEADING_14 : FONT_LEADING_18;
+    const FontSize date_font =
+        (date_h < 18) ? FONT_SIZE_HEADER : FONT_SIZE_VALUE;
 #endif
     GRect date_rect = GRect(time_x, y + 3 - l_date, time_w,
                             date_h + l_date);
@@ -408,13 +292,6 @@ Layer *time_panel_create(GRect bounds) {
 }
 
 void time_panel_destroy(void) {
-#if !PBL_BW
-  if (s_logo_scaled) {
-    gbitmap_destroy(s_logo_scaled);
-    s_logo_scaled = NULL;
-    s_logo_scaled_size = GSizeZero;
-  }
-#endif  // !PBL_BW
   if (s_logo_bmp) {
     gbitmap_destroy(s_logo_bmp);
     s_logo_bmp = NULL;

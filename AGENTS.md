@@ -136,14 +136,19 @@ flint mins sum to the exact available height (168 − 2×2 − 2×1 = 162).
 - **Time fonts** (`time_panel.c`): ladder rungs check content height AND width ≥
   `prv_time_max_w(face)` (worst-case "04:44": 92@40 / 115@50 / 138@60 / 165@72 / 184@80):
   with date → ≥89→72px · ≥77→60px · ≥61→40px SMALL · else 50px; no date → 80/72/60px.
-  Hero (content ≥ 120 high): 80px MASSIVE when the block fits with a 2px cushion, else lower
-  rungs. flint: time 40px, logo zone 36px, date 14px (`FONT_SIZE_HEADER`)
-- **Logo rendering:** zone capped 64px (flint 36px); 3-gaps centering anchors the logo right
-  so outer margins stay equal whatever the digits. Downscaled logos are **cached per
-  (logo, size)** on color platforms (`prv_scale_logo()` — bpp-aware nearest-neighbor,
-  partial alpha dithered 50%, a≤1 skipped); 1-bit flint draws per-pixel each frame — no cache
-  (a cached 1-bit logo renders as a white box). Hero downscales the logo to fit (hidden if
-  < 20px remain)
+  Hero (content ≥ 120 high, TIME-only or TIME+SYSTEMS): each rung requires the FULL logo
+  to fit below the face (6 + logo height) and degrades the date 18→14px before stepping
+  the face down; final rung = 40px SMALL (gabbro sys-only: 40px + full logo + 18px date).
+  flint: time 40px, logo zone 36px, date 14px (`FONT_SIZE_HEADER`)
+- **Logo rendering:** pre-baked per-platform assets (`package.json` `targetPlatforms`,
+  same resource name twice): color = cyan logos flattened on OxfordBlue and quantized to
+  the official Pebble 64 palette (opaque, AA baked into exact palette colors — pixel-
+  deterministic on hardware); flint = white silhouettes max-fit 36px, binary alpha. Zero
+  runtime scaling: `prv_draw_logo()` is a plain `graphics_draw_bitmap_in_rect` +
+  GCompOpSet everywhere; `prv_scale_logo()`/`prv_draw_bitmap_scaled()` are gone. Zone
+  capped 64px (flint 36px); 3-gaps centering anchors the logo right so outer margins stay
+  equal whatever the digits. An asset exceeding its zone (stale resource) is hidden, never
+  scaled
 - **ENVIRON** (`environ_panel.c`): wide (≥ 120px) = left-aligned flow, items measured by
   `prv_item_need_w()` and wrapped (strict width for layout, +5/+7 drawing slack); narrow =
   pair packing with measured splits + k-fulls packer (WEATHER first, then WIND, own rows
