@@ -1,68 +1,64 @@
-# Changelog — sc-mobiglas
+# Changelog: sc-mobiglas
 
-## [0.3.0] — 2026-09-30
+## [0.3.0] - 2026-09-30
 
-Full platform support: the round **Pebble Round 2** and the black & white
-**Pebble 2 Duo** now each get a layout tailored to their screen. The clock
-auto-sizes to the space it gets and weather is cached for an instant return
-to the watchface.
+Full platform support: the round **Pebble Round 2** and the black & white **Pebble 2 Duo** now each get a layout tailored to their screen. The clock auto-sizes to the space it gets and weather is cached for an instant return to the watchface.
 
 ### Added
 
-- **Weather cache** — returning to the watchface now shows the last weather data (up to 10 minutes old) instantly, instead of `---` placeholders while re-fetching; also fewer weather API requests
+- **Weather cache**: returning to the watchface shows the last weather instantly, up to 10 minutes old.
 
 ### Changed
 
-- **Auto-sizing time** — the clock automatically grows when fewer panels are enabled: combo layouts like TIME + SYSTEMS now get hero-size time, and the largest font that fits is always chosen — the date shrinks first, the clock steps down last
-- **Round displays (Pebble Round 2)** — the layout follows the screen shape: panels keep their corners inside the bezel, and a seamless background with thin separator lines replaces boxed panels
-- **ENVIRON flow** — metrics are laid out left-aligned and wrap like text on wide panels; narrower panels pack them with measured widths, abbreviating conditions (CLR, RN, …) and wind speed when space is tight
-- **B&W displays (Pebble 2 Duo)** — MEDICAL and ENVIRON panels reworked for the smaller 144px screen: health values read below the rings, weather rows are compact (sunrise/sunset hidden when panels share a row), and info icons become small dots to free space for text
-- **B&W logo** — the constructor logo now fits beside the time on B&W watches (previously hidden), rendered as a clean white silhouette
+- **Auto-sizing time**: the clock grows when fewer panels are enabled, always using the largest font that fits.
+- **Round displays**: the layout follows the screen shape with a seamless background.
+- **ENVIRON flow**: metrics wrap like text on wide panels and pack tightly on narrow ones.
+- **B&W displays**: MEDICAL and ENVIRON are reworked for the 144px screen.
+- **B&W logo**: the logo now fits beside the time as a clean white silhouette.
 
 ### Fixed
 
-- **Round displays** — panel corners, the "NAVCOMP" header and the battery row were clipped by the bezel; the hero clock could also be truncated ("00:…") — the size ladder now guarantees the widest time fits
-- **Logos** — pre-baked per-platform assets replace runtime scaling: color logos are flattened on the panel background (crisp, pixel-deterministic — fixes the washed-out hero logo) and B&W logos render as clean silhouettes; the logo is now centered between the time and the screen edge instead of hugging the right border
-- **ENVIRON packing** — the weather icon vanished from the top row when every metric was enabled, the wind arrow was hidden when humidity was disabled, and the weather row stayed compressed in a pair even when a full row was available; icons are now kept and full rows used whenever they fit
-- **B&W displays** — low-battery, communication and storm warnings were invisible (they rendered black on black) and gauge tracks were invisible too; both now render in white
+- **Round displays**: clipped corners, header and battery row are back inside the bezel.
+- **Hero clock**: the time can no longer be truncated.
+- **Logos**: pre-baked per-platform assets render crisp and centered on every display.
+- **ENVIRON packing**: icons and full rows are kept whenever they fit.
+- **B&W displays**: warnings and gauge tracks now render in white instead of invisible black.
 
-## [0.2.0] — 2026-09-28
+## [0.2.0] - 2026-09-28
 
 ### Added
 
-- **Per-panel configurable metrics** — choose which information each panel displays from the watchface settings:
-  - **MEDICAL**: pick up to 8 metrics (BPM, steps, sleep, calories, distance, active minutes, resting calories, deep sleep) — up to 4 ring gauges side-by-side in full width, 2 in split layout
-  - **ENVIRON**: toggle weather, wind, humidity, UV, sunrise/sunset individually
-  - **SYSTEMS**: toggle battery and communication indicators individually
-  - Selections are persisted on the watch
-- **Date display** — `DOW DD MON` shown under the time
-- **Hero mode** — when the TIME panel is alone, the time displays larger
+- **Configurable metrics**: choose what each panel displays from the settings.
+- **MEDICAL**: up to 8 health metrics (BPM, steps, sleep, calories, distance, active minutes, resting calories, deep sleep).
+- **ENVIRON**: toggle weather, wind, humidity, UV and sunrise/sunset individually.
+- **SYSTEMS**: toggle battery and communication indicators.
+- **Date display**: `DOW DD MON` shown under the time.
+- **Hero mode**: larger time when the panel is alone on screen.
 
 ### Changed
 
-- **SYSTEMS panel redesign** — battery percentage and bar on one line, adaptive bar (3–6 segments depending on available width), plus Bluetooth communication status (antenna icon, `COM OK` / `COM ERR`)
+- **SYSTEMS redesign**: battery bar and Bluetooth status on one line.
 
 ### Fixed
 
-- **Constructor logos** — oversized logos overlapped the time and were clipped at the screen edge; all 9 logos re-exported to fit the 64px logo zone
-- **Bluetooth icon color** — now follows the label color setting
-- **Settings on Android (Rebble)** — multi-select options in the settings page only partially applied on real phones due to a boolean serialization bug in the Android runtime; values are now normalized before being sent to the watch
+- **Constructor logos**: no more overlap with the time.
+- **Bluetooth icon color**: follows the label color setting.
+- **Android settings**: multi-select options now apply correctly on real phones.
 
-## [0.1.0] — 2026-09-23
+## [0.1.0] - 2026-09-23
 
 Initial release.
 
 ### Added
 
-- Holographic mobiGlas layout: time, weather, health, and battery panels
-- Time with 12h/24h formats
-- Live weather via Open-Meteo: temperature, conditions, wind, humidity, UV index, sunrise/sunset
-- Health: heart rate and daily steps
-- 9 manufacturer logos to choose from
-- 5 customizable accent colors + reset
-- Toggle MEDICAL / ENVIRON / SYSTEMS panels on or off
-- Color displays (Pebble Time 2), basic round support (Pebble Time 2 Round), and B&W displays (Pebble 2 Duo)
+- **mobiGlas layout**: time, weather, health and battery panels in a clean sci-fi look.
+- **Time formats**: 12h and 24h.
+- **Live weather**: temperature, conditions, wind, humidity, UV index, sunrise/sunset.
+- **Health**: heart rate and daily steps.
+- **Logos**: 9 manufacturer logos to choose from.
+- **Colors**: 5 accent colors with a reset button.
+- **Panels**: toggle MEDICAL, ENVIRON and SYSTEMS on or off.
 
 ### Notes
 
-- On B&W watches, colors render as white and the logo is hidden next to the time (screen too narrow).
+- **B&W watches**: colors render as white and the logo is hidden, the screen is too narrow for both.
