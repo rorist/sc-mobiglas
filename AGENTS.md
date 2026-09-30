@@ -402,3 +402,13 @@ Build must pass with **0 warnings** from project code.
   never hardcode emery dimensions
 - `index.js` stays thin — business logic lives in `weather.js` / `config.js`
 - Fallback `"---"` for any missing data (health, weather)
+
+---
+
+## Assistant Behavior
+
+- Keep responses concise — short answers, no restating known context
+- Never run `git commit` or `git push` — the user commits himself; always
+  propose a one-line commit message instead
+- Reply in the user's language (French if the user writes French),
+  but always reason in English
