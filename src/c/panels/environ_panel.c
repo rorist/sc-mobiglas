@@ -372,8 +372,10 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
             if (a == 1 || b == 1) {
               // Wind pairs: measured split with an icon-first ladder —
               // 1. strict split where BOTH cells keep their icon,
-              // 2. otherwise a retry on the smaller font face,
-              // 3. on the last face the wind icon is dropped rather than
+              // 2. otherwise, for half pairs, the other cell goes
+              //    text-only (its icon auto-drops below ENV_WIDE_MIN),
+              // 3. otherwise a retry on the smaller font face,
+              // 4. on the last face the wind icon is dropped rather than
               //    failing the pack outright.
               const int wind_w = (int)graphics_text_layout_get_content_size(
                   s_wind_short, pf, GRect(0, 0, w, 20),
@@ -393,6 +395,20 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
               int wind_cell = ENV_ICON_W + wind_w + 3;  // icon + text + small guard
               int other_cell = w - 3 - wind_cell;
               if (other_cell >= other_ico_min) {
+                if (a == 1) {
+                  row_w[row_count] = wind_cell + 3;  // left pad rides along
+                  row_w2[row_count] = other_cell;
+                } else {
+                  row_w[row_count] = other_cell;
+                  row_w2[row_count] = wind_cell;
+                }
+              } else if (!has_weather &&
+                         other_cell >= prv_text_w(
+                             prv_metric_txt((a == 1) ? b : a, false), pf)) {
+                // Rung 2: both-icons split missed by a few px — accept
+                // the pair with the OTHER cell as text only (its icon
+                // auto-drops below ENV_WIDE_MIN). Better than losing
+                // WEATHER's full row to the all-pairs pass.
                 if (a == 1) {
                   row_w[row_count] = wind_cell + 3;  // left pad rides along
                   row_w2[row_count] = other_cell;
