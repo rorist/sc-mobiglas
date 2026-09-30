@@ -94,7 +94,6 @@ static void prv_draw_bitmap_scaled(GContext *ctx, GBitmap *bmp, GRect dst) {
       if (sx < row_info.min_x || sx > row_info.max_x) continue;
       const GColor c = palette[prv_px_index(row_info.data, sx, bpp)];
       if (c.a == 0 || c.a == 1) continue;  // transparent / near-transparent
-      if (c.a == 2 && ((x + y) & 1)) continue;  // partial alpha: 50% dither
       graphics_context_set_fill_color(ctx, c);
       graphics_fill_rect(ctx, GRect(dst.origin.x + x, dst.origin.y + y, 1, 1),
                          0, GCornerNone);
@@ -133,13 +132,16 @@ static GBitmap *prv_scale_logo(GBitmap *bmp, GSize size) {
       if (sx < row_info.min_x || sx > row_info.max_x) continue;
       const GColor c = palette[prv_px_index(row_info.data, sx, bpp)];
       if (c.a == 0 || c.a == 1) continue;  // transparent / near-transparent
-      if (c.a == 2 && ((x + y) & 1)) continue;  // partial alpha: 50% dither
 #if PBL_BW
       if (!gcolor_equal(c, GColorWhite)) {
         dst[y * stride + (x >> 3)] |= 0x80 >> (x & 7);
       }
 #else
-      dst[y * stride + x] = c.argb;
+      // Bake full alpha: partial-alpha pixels are kept solid (they are
+      // the bulk of the antialiased strokes) — keeping a == 2 would
+      // alpha-blend again on draw and wash the logo out, while 50%
+      // dithering them read as too transparent.
+      dst[y * stride + x] = c.argb | 0xC0;
 #endif
     }
   }
@@ -214,17 +216,21 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // Hero mode = tall content (time-only, or the other rows pinned at their
   // minimum leaves TIME huge): time goes full-width with the logo centered
   // below it; 80px only if width AND the full block (time + logo + date)
-  // fit the content, else step down to 72/60px
-  const bool hero = content.size.h >= 120;
+  // fit the content, else step down to 72/60px.
+  // Hero is reserved for TIME-only and TIME+SYSTEMS layouts: MEDICAL or
+  // ENVIRON on screen keeps the logo in its right-side zone — beside the
+  // time it renders better than the cramped under-time slot.
+  const bool hero = content.size.h >= 120 &&
+      !(watchface_get_config() & (CONFIG_MEDICAL | CONFIG_ENVIRON));
   FontSize time_font;
   int time_rect_h;
   if (hero) {
     const int logo_h = show_logo ? 6 + logo_bounds.size.h : 0;
-    // 80px face as soon as the width allows it; the logo is downscaled
-    // (>=20px kept) or hidden if there is no room, so the block always
-    // fits the content (no bezel clip)
+    // 80px face as soon as the width allows it; each rung requires the
+    // FULL logo to fit below the time (logo_h = 6 + logo height), so the
+    // logo is never squeezed — the block steps down to 72/60px instead
     if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_MASSIVE) &&
-        76 + 20 + (date_on ? 21 : 0) <= content.size.h) {
+        76 + logo_h + (date_on ? 21 : 0) <= content.size.h) {
       time_font = FONT_SIZE_TIME_MASSIVE;
       time_rect_h = 76;
     } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_HUGE) &&
