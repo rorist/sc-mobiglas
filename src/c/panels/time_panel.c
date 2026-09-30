@@ -227,7 +227,20 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     int m = (content.size.w - time_w - logo_draw_w) / 3;
     if (m < 0) m = 0;
     time_x = content.origin.x + m;
-    logo_x = content.origin.x + content.size.w - m - logo_draw_w;
+    // The time stays anchored on its zero-drift worst-case slot, but the
+    // digits rarely fill it — center the logo between the VISIBLE digits
+    // and the right edge so both gaps read equal whatever the hour
+    const int ts_w = graphics_text_layout_get_content_size(
+        s_time_buf, fonts_get(time_font), GRect(0, 0, time_w, 80),
+        GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter).w;
+    const int vis_end = time_x + (time_w + ts_w) / 2;
+    logo_x = vis_end +
+        (content.origin.x + content.size.w - vis_end - logo_draw_w) / 2;
+    // Clamp against the VISIBLE digits, not the reserved slot — the slot
+    // tail is empty for narrow hours, the logo may slide into it
+    if (logo_x < vis_end) logo_x = vis_end;
+    const int logo_max_x = content.origin.x + content.size.w - logo_draw_w;
+    if (logo_x > logo_max_x) logo_x = logo_max_x;
   }
 
   GRect time_rect = GRect(time_x, y_offset - l_time,
