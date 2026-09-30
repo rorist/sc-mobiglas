@@ -135,7 +135,7 @@ static void prv_draw_metric_icon(GContext *ctx, int metric, int cell_x,
     prv_draw_dot(ctx, GPoint(cell_x, y_line + 6));
     return;
   }
-  const GPoint p = GPoint(cell_x, y_line + (metric == 0 ? 2 : 3));
+  const GPoint p = GPoint(cell_x, y_line + 3);
   switch (metric) {
     case 0:  draw_weather_icon(ctx, p, prv_cond_index(s_cond_buf)); break;
     case 1:  draw_wind_icon(ctx, p); break;

@@ -131,45 +131,47 @@ void draw_weather_icon(GContext *ctx, GPoint origin, int cond_idx) {
   graphics_context_set_fill_color(ctx, col);
 
   switch (cond_idx) {
-    case 0:  // CLEAR — hollow circle
-      graphics_draw_circle(ctx, GPoint(x + 4, y + 4), 3);
+    case 0:  // CLEAR — hollow circle filling the 7x7 box
+      graphics_draw_circle(ctx, GPoint(x + 3, y + 3), 3);
       break;
 
-    case 1:  // CLOUDY — top dome arc + baseline
-      graphics_draw_arc(ctx, GRect(x, y + 1, 8, 8),
+    case 1:  // CLOUDY — dome + side walls + flat base (7x6)
+      graphics_draw_arc(ctx, GRect(x, y, 6, 6),
                         GOvalScaleModeFitCircle,
                         DEG_TO_TRIGANGLE(0), DEG_TO_TRIGANGLE(180));
-      graphics_draw_line(ctx, GPoint(x, y + 5), GPoint(x + 8, y + 5));
+      graphics_draw_line(ctx, GPoint(x, y + 3), GPoint(x, y + 5));
+      graphics_draw_line(ctx, GPoint(x + 6, y + 3), GPoint(x + 6, y + 5));
+      graphics_draw_line(ctx, GPoint(x, y + 5), GPoint(x + 6, y + 5));
       break;
 
-    case 2:  // FOG — three staggered horizontal lines
-      graphics_draw_line(ctx, GPoint(x, y + 1), GPoint(x + 7, y + 1));
-      graphics_draw_line(ctx, GPoint(x, y + 4), GPoint(x + 7, y + 4));
-      graphics_draw_line(ctx, GPoint(x + 1, y + 7), GPoint(x + 7, y + 7));
+    case 2:  // FOG — three full-width horizontal lines
+      graphics_draw_line(ctx, GPoint(x, y), GPoint(x + 6, y));
+      graphics_draw_line(ctx, GPoint(x, y + 3), GPoint(x + 6, y + 3));
+      graphics_draw_line(ctx, GPoint(x, y + 6), GPoint(x + 6, y + 6));
       break;
 
     case 3:  // RAIN — small cloud + 2 slanted drops
-      graphics_draw_arc(ctx, GRect(x + 1, y, 6, 6), GOvalScaleModeFitCircle,
+      graphics_draw_arc(ctx, GRect(x, y, 6, 6), GOvalScaleModeFitCircle,
                         DEG_TO_TRIGANGLE(0), DEG_TO_TRIGANGLE(180));
-      graphics_draw_line(ctx, GPoint(x + 1, y + 3), GPoint(x + 7, y + 3));
-      graphics_draw_line(ctx, GPoint(x + 3, y + 5), GPoint(x + 2, y + 7));
-      graphics_draw_line(ctx, GPoint(x + 5, y + 5), GPoint(x + 4, y + 7));
+      graphics_draw_line(ctx, GPoint(x, y + 3), GPoint(x + 6, y + 3));
+      graphics_draw_line(ctx, GPoint(x + 2, y + 4), GPoint(x + 1, y + 6));
+      graphics_draw_line(ctx, GPoint(x + 4, y + 4), GPoint(x + 3, y + 6));
       break;
 
     case 4:  // SNOW — 6-armed star
-      graphics_draw_line(ctx, GPoint(x + 4, y), GPoint(x + 4, y + 8));
-      graphics_draw_line(ctx, GPoint(x + 1, y + 1), GPoint(x + 7, y + 7));
-      graphics_draw_line(ctx, GPoint(x + 7, y + 1), GPoint(x + 1, y + 7));
+      graphics_draw_line(ctx, GPoint(x + 3, y), GPoint(x + 3, y + 6));
+      graphics_draw_line(ctx, GPoint(x, y), GPoint(x + 6, y + 6));
+      graphics_draw_line(ctx, GPoint(x + 6, y), GPoint(x, y + 6));
       break;
 
     case 5:  // STORM — lightning bolt polyline
-      graphics_draw_line(ctx, GPoint(x + 5, y), GPoint(x + 2, y + 4));
-      graphics_draw_line(ctx, GPoint(x + 2, y + 4), GPoint(x + 4, y + 4));
-      graphics_draw_line(ctx, GPoint(x + 4, y + 4), GPoint(x + 2, y + 8));
+      graphics_draw_line(ctx, GPoint(x + 6, y), GPoint(x + 2, y + 3));
+      graphics_draw_line(ctx, GPoint(x + 2, y + 3), GPoint(x + 4, y + 3));
+      graphics_draw_line(ctx, GPoint(x + 4, y + 3), GPoint(x, y + 6));
       break;
 
     default:  // UNKNOWN — hollow square
-      graphics_draw_rect(ctx, GRect(x + 1, y + 1, 6, 6));
+      graphics_draw_rect(ctx, GRect(x, y, 7, 7));
       break;
   }
 }
@@ -184,21 +186,21 @@ void draw_sun_icon(GContext *ctx, GPoint origin, bool sunset) {
   graphics_context_set_stroke_color(ctx, watchface_get_color_label());
 
   if (!sunset) {
-    // Sun — hollow circle r2 centered (4,4) + 8 rays
-    graphics_draw_circle(ctx, GPoint(x + 4, y + 4), 2);
-    graphics_draw_line(ctx, GPoint(x + 4, y + 0), GPoint(x + 4, y + 1));
-    graphics_draw_line(ctx, GPoint(x + 4, y + 6), GPoint(x + 4, y + 7));
-    graphics_draw_line(ctx, GPoint(x + 0, y + 4), GPoint(x + 1, y + 4));
-    graphics_draw_line(ctx, GPoint(x + 6, y + 4), GPoint(x + 7, y + 4));
-    graphics_draw_line(ctx, GPoint(x + 1, y + 1), GPoint(x + 2, y + 2));
-    graphics_draw_line(ctx, GPoint(x + 6, y + 2), GPoint(x + 7, y + 1));
-    graphics_draw_line(ctx, GPoint(x + 1, y + 7), GPoint(x + 2, y + 6));
-    graphics_draw_line(ctx, GPoint(x + 6, y + 6), GPoint(x + 7, y + 7));
+    // Sun — hollow circle r2 centered (3,3) + 8 rays reaching the 7x7 box edges
+    graphics_draw_circle(ctx, GPoint(x + 3, y + 3), 2);
+    graphics_draw_line(ctx, GPoint(x + 3, y + 0), GPoint(x + 3, y + 1));
+    graphics_draw_line(ctx, GPoint(x + 3, y + 5), GPoint(x + 3, y + 6));
+    graphics_draw_line(ctx, GPoint(x + 0, y + 3), GPoint(x + 1, y + 3));
+    graphics_draw_line(ctx, GPoint(x + 5, y + 3), GPoint(x + 6, y + 3));
+    graphics_draw_line(ctx, GPoint(x + 0, y + 0), GPoint(x + 1, y + 1));
+    graphics_draw_line(ctx, GPoint(x + 6, y + 0), GPoint(x + 5, y + 1));
+    graphics_draw_line(ctx, GPoint(x + 0, y + 6), GPoint(x + 1, y + 5));
+    graphics_draw_line(ctx, GPoint(x + 6, y + 6), GPoint(x + 5, y + 5));
   } else {
-    // Moon — right-half arc + vertical chord
-    graphics_draw_arc(ctx, GRect(x + 2, y + 2, 4, 4), GOvalScaleModeFitCircle,
+    // Moon — top-half arc r3 + vertical chord (same mass as the sun)
+    graphics_draw_arc(ctx, GRect(x, y, 6, 6), GOvalScaleModeFitCircle,
                       DEG_TO_TRIGANGLE(0), DEG_TO_TRIGANGLE(180));
-    graphics_draw_line(ctx, GPoint(x + 4, y + 2), GPoint(x + 4, y + 6));
+    graphics_draw_line(ctx, GPoint(x + 3, y), GPoint(x + 3, y + 6));
   }
 }
 
@@ -210,12 +212,12 @@ void draw_drop_icon(GContext *ctx, GPoint origin) {
   int y = origin.y;
   graphics_context_set_stroke_color(ctx, watchface_get_color_label());
 
-  // Pointed top converging to the bowl
-  graphics_draw_line(ctx, GPoint(x + 4, y + 1), GPoint(x + 2, y + 5));
-  graphics_draw_line(ctx, GPoint(x + 4, y + 1), GPoint(x + 6, y + 5));
-  // Bottom bowl — semicircle right→bottom→left
-  graphics_draw_arc(ctx, GRect(x + 2, y + 3, 4, 4), GOvalScaleModeFitCircle,
-                    DEG_TO_TRIGANGLE(90), DEG_TO_TRIGANGLE(270));
+  // Pointed top converging to the bowl rim
+  graphics_draw_line(ctx, GPoint(x + 3, y), GPoint(x, y + 3));
+  graphics_draw_line(ctx, GPoint(x + 3, y), GPoint(x + 6, y + 3));
+  // Bottom bowl — lower half of the r3 circle centered (3,3)
+  graphics_draw_arc(ctx, GRect(x, y, 6, 6), GOvalScaleModeFitCircle,
+                    DEG_TO_TRIGANGLE(180), DEG_TO_TRIGANGLE(360));
 }
 
 // ---------------------------------------------------------------------------
@@ -227,10 +229,10 @@ void draw_wind_icon(GContext *ctx, GPoint origin) {
   graphics_context_set_stroke_color(ctx, watchface_get_color_label());
 
   // Shaft diagonal bottom-left → top-right
-  graphics_draw_line(ctx, GPoint(x + 1, y + 6), GPoint(x + 6, y + 1));
+  graphics_draw_line(ctx, GPoint(x, y + 6), GPoint(x + 6, y));
   // Arrowhead — horizontal-left and vertical-down from tip
-  graphics_draw_line(ctx, GPoint(x + 6, y + 1), GPoint(x + 3, y + 1));
-  graphics_draw_line(ctx, GPoint(x + 6, y + 1), GPoint(x + 6, y + 4));
+  graphics_draw_line(ctx, GPoint(x + 6, y), GPoint(x + 2, y));
+  graphics_draw_line(ctx, GPoint(x + 6, y), GPoint(x + 6, y + 4));
 }
 
 // ---------------------------------------------------------------------------
@@ -241,9 +243,10 @@ void draw_uv_icon(GContext *ctx, GPoint origin) {
   int y = origin.y;
   graphics_context_set_stroke_color(ctx, watchface_get_color_label());
 
-  graphics_draw_line(ctx, GPoint(x + 0, y + 2), GPoint(x + 2, y + 4));
-  graphics_draw_line(ctx, GPoint(x + 3, y + 2), GPoint(x + 5, y + 4));
-  graphics_draw_line(ctx, GPoint(x + 6, y + 2), GPoint(x + 7, y + 3));
+  // 3 diagonal beams spanning the full 7x7 box
+  graphics_draw_line(ctx, GPoint(x, y), GPoint(x + 2, y + 6));
+  graphics_draw_line(ctx, GPoint(x + 3, y), GPoint(x + 5, y + 6));
+  graphics_draw_line(ctx, GPoint(x + 6, y), GPoint(x + 6, y + 5));
 }
 
 // ---------------------------------------------------------------------------
@@ -254,13 +257,13 @@ void draw_comm_icon(GContext *ctx, GPoint origin) {
   int x = origin.x;
   int y = origin.y;
 
-  // Mast + base
-  graphics_draw_line(ctx, GPoint(x + 2, y + 5), GPoint(x + 2, y + 7));
-  graphics_draw_line(ctx, GPoint(x + 1, y + 7), GPoint(x + 3, y + 7));
+  // Mast + full-width base
+  graphics_draw_line(ctx, GPoint(x + 3, y + 3), GPoint(x + 3, y + 6));
+  graphics_draw_line(ctx, GPoint(x, y + 6), GPoint(x + 6, y + 6));
 
   // Signal arcs — quarter circles centered on the mast tip, top-right quadrant
-  graphics_draw_arc(ctx, GRect(x + 0, y + 3, 4, 4), GOvalScaleModeFitCircle,
+  graphics_draw_arc(ctx, GRect(x + 1, y + 1, 4, 4), GOvalScaleModeFitCircle,
                     DEG_TO_TRIGANGLE(0), DEG_TO_TRIGANGLE(90));
-  graphics_draw_arc(ctx, GRect(x - 2, y + 1, 8, 8), GOvalScaleModeFitCircle,
+  graphics_draw_arc(ctx, GRect(x, y, 6, 6), GOvalScaleModeFitCircle,
                     DEG_TO_TRIGANGLE(0), DEG_TO_TRIGANGLE(90));
 }
