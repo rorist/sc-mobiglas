@@ -388,8 +388,9 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
               // Icon-strict minimum for the other cell: icon + temp when the
               // pair holds WEATHER (the condition degrades on its own), else
               // icon + short text for half metrics.
-              const int other_ico_min = has_weather ? 10 + temp_w : 40;
-              int wind_cell = 10 + wind_w + 3;  // icon + text + small guard
+              const int other_ico_min =
+                  has_weather ? ENV_ICON_W + temp_w : ENV_WIDE_MIN;
+              int wind_cell = ENV_ICON_W + wind_w + 3;  // icon + text + small guard
               int other_cell = w - 3 - wind_cell;
               if (other_cell >= other_ico_min) {
                 if (a == 1) {
