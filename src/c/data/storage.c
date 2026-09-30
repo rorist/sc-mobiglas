@@ -95,43 +95,21 @@ static GColor prv_load_color(int key, GColor def) {
   return (GColor){ .argb = (uint8_t)persist_read_int(key) };
 }
 
-GColor storage_load_color_time(void) {
-  return prv_load_color(PERSIST_KEY_COLOR_TIME, COLOR_TIME_DEFAULT);
+// Persist keys and defaults per ColorSlot — keys 3..7 in slot order
+static const uint8_t s_color_key[COLOR_SLOT_COUNT] = {
+  PERSIST_KEY_COLOR_TIME, PERSIST_KEY_COLOR_VALUE, PERSIST_KEY_COLOR_LABEL,
+  PERSIST_KEY_COLOR_HEADER, PERSIST_KEY_COLOR_WARN,
+};
+static const GColor s_color_default[COLOR_SLOT_COUNT] = {
+  COLOR_TIME_DEFAULT, COLOR_VALUE_DEFAULT, COLOR_LABEL_DEFAULT,
+  COLOR_HEADER_DEFAULT, COLOR_WARN_DEFAULT,
+};
+
+GColor storage_load_color(ColorSlot slot) {
+  return prv_load_color(s_color_key[slot], s_color_default[slot]);
 }
 
-GColor storage_load_color_value(void) {
-  return prv_load_color(PERSIST_KEY_COLOR_VALUE, COLOR_VALUE_DEFAULT);
-}
-
-GColor storage_load_color_label(void) {
-  return prv_load_color(PERSIST_KEY_COLOR_LABEL, COLOR_LABEL_DEFAULT);
-}
-
-GColor storage_load_color_header(void) {
-  return prv_load_color(PERSIST_KEY_COLOR_HEADER, COLOR_HEADER_DEFAULT);
-}
-
-GColor storage_load_color_warn(void) {
-  return prv_load_color(PERSIST_KEY_COLOR_WARN, COLOR_WARN_DEFAULT);
-}
-
-void storage_save_color_time(GColor color) {
-  persist_write_int(PERSIST_KEY_COLOR_TIME, (int32_t)color.argb);
-}
-
-void storage_save_color_value(GColor color) {
-  persist_write_int(PERSIST_KEY_COLOR_VALUE, (int32_t)color.argb);
-}
-
-void storage_save_color_label(GColor color) {
-  persist_write_int(PERSIST_KEY_COLOR_LABEL, (int32_t)color.argb);
-}
-
-void storage_save_color_header(GColor color) {
-  persist_write_int(PERSIST_KEY_COLOR_HEADER, (int32_t)color.argb);
-}
-
-void storage_save_color_warn(GColor color) {
-  persist_write_int(PERSIST_KEY_COLOR_WARN, (int32_t)color.argb);
+void storage_save_color(ColorSlot slot, GColor color) {
+  persist_write_int(s_color_key[slot], (int32_t)color.argb);
 }
 

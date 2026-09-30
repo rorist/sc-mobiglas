@@ -17,12 +17,11 @@ static uint32_t s_env_mask = 0x3F;   // all 6
 static uint32_t s_sys_mask = 0x03;   // BAT + COM
 static GRect s_screen_bounds;
 
-// Configurable text colors
-static GColor s_color_time = COLOR_TIME_DEFAULT;
-static GColor s_color_value = COLOR_VALUE_DEFAULT;
-static GColor s_color_label = COLOR_LABEL_DEFAULT;
-static GColor s_color_header = COLOR_HEADER_DEFAULT;
-static GColor s_color_warn = COLOR_WARN_DEFAULT;
+// Configurable text colors, indexed by ColorSlot (defaults from watchface.h)
+static GColor s_colors[COLOR_SLOT_COUNT] = {
+  COLOR_TIME_DEFAULT, COLOR_VALUE_DEFAULT, COLOR_LABEL_DEFAULT,
+  COLOR_HEADER_DEFAULT, COLOR_WARN_DEFAULT,
+};
 
 // Round chrome (gabbro): the background is drawn once by the root layer;
 // this top layer adds the cyan separators — horizontal lines between rows
@@ -149,11 +148,9 @@ void watchface_create(Window *window) {
   s_med_mask = storage_load_med_metrics();
   s_env_mask = storage_load_env_metrics();
   s_sys_mask = storage_load_sys_metrics();
-  s_color_time = storage_load_color_time();
-  s_color_value = storage_load_color_value();
-  s_color_label = storage_load_color_label();
-  s_color_header = storage_load_color_header();
-  s_color_warn = storage_load_color_warn();
+  for (int i = 0; i < COLOR_SLOT_COUNT; i++) {
+    s_colors[i] = storage_load_color((ColorSlot)i);
+  }
 
   // Load fonts
   fonts_init();
@@ -286,36 +283,21 @@ static GColor prv_clamp_bw(GColor c) {
   return PBL_IF_BW_ELSE(GColorWhite, c);
 }
 
-GColor watchface_get_color_time(void) { return prv_clamp_bw(s_color_time); }
-GColor watchface_get_color_value(void) { return prv_clamp_bw(s_color_value); }
-GColor watchface_get_color_label(void) { return prv_clamp_bw(s_color_label); }
-GColor watchface_get_color_header(void) { return prv_clamp_bw(s_color_header); }
-GColor watchface_get_color_warn(void) { return prv_clamp_bw(s_color_warn); }
+GColor watchface_get_color(ColorSlot slot) {
+  return prv_clamp_bw(s_colors[slot]);
+}
 
-void watchface_set_color_time(GColor color) {
-  s_color_time = color;
+void watchface_set_color(ColorSlot slot, GColor color) {
+  s_colors[slot] = color;
   prv_mark_all_dirty();
 }
 
-void watchface_set_color_value(GColor color) {
-  s_color_value = color;
-  prv_mark_all_dirty();
-}
-
-void watchface_set_color_label(GColor color) {
-  s_color_label = color;
-  prv_mark_all_dirty();
-}
-
-void watchface_set_color_header(GColor color) {
-  s_color_header = color;
-  prv_mark_all_dirty();
-}
-
-void watchface_set_color_warn(GColor color) {
-  s_color_warn = color;
-  prv_mark_all_dirty();
-}
+// Named getters used by the panels
+GColor watchface_get_color_time(void) { return watchface_get_color(COLOR_SLOT_TIME); }
+GColor watchface_get_color_value(void) { return watchface_get_color(COLOR_SLOT_VALUE); }
+GColor watchface_get_color_label(void) { return watchface_get_color(COLOR_SLOT_LABEL); }
+GColor watchface_get_color_header(void) { return watchface_get_color(COLOR_SLOT_HEADER); }
+GColor watchface_get_color_warn(void) { return watchface_get_color(COLOR_SLOT_WARN); }
 
 void watchface_update_config(uint8_t config) {
   if (config == s_config) return;

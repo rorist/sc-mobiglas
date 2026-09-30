@@ -111,17 +111,27 @@ void watchface_set_env_metrics(uint32_t mask);
 void watchface_set_sys_metrics(uint32_t mask);
 
 
-// Configurable text colors (runtime)
+// Configurable text colors (runtime) — ColorSlot indexes both the storage
+// persist keys and the Clay color pickers, in this order.
+typedef enum {
+  COLOR_SLOT_TIME = 0,
+  COLOR_SLOT_VALUE,
+  COLOR_SLOT_LABEL,
+  COLOR_SLOT_HEADER,
+  COLOR_SLOT_WARN,
+  COLOR_SLOT_COUNT
+} ColorSlot;
+
+// Slot-based access (clamped to white on B&W flint)
+GColor watchface_get_color(ColorSlot slot);
+void watchface_set_color(ColorSlot slot, GColor color);
+
+// Named getters used by the panels
 GColor watchface_get_color_time(void);
 GColor watchface_get_color_value(void);
 GColor watchface_get_color_label(void);
 GColor watchface_get_color_header(void);
 GColor watchface_get_color_warn(void);
-void watchface_set_color_time(GColor color);
-void watchface_set_color_value(GColor color);
-void watchface_set_color_label(GColor color);
-void watchface_set_color_header(GColor color);
-void watchface_set_color_warn(GColor color);
 
 
 // ---------------------------------------------------------------------------

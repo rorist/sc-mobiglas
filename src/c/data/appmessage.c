@@ -113,29 +113,19 @@ static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
   }
 
   // Configurable text colors — Clay "color" sends Int32 (0xRRGGBB packed);
-  // prv_color_from_tuple also tolerates a CString "#rrggbb"
-    const struct {
-    uint32_t key;
-    void (*set)(GColor);
-    void (*save)(GColor);
-  } color_keys[] = {
-    { MESSAGE_KEY_KEY_COLOR_TIME, watchface_set_color_time,
-      storage_save_color_time },
-    { MESSAGE_KEY_KEY_COLOR_VALUE, watchface_set_color_value,
-      storage_save_color_value },
-    { MESSAGE_KEY_KEY_COLOR_LABEL, watchface_set_color_label,
-      storage_save_color_label },
-    { MESSAGE_KEY_KEY_COLOR_HEADER, watchface_set_color_header,
-      storage_save_color_header },
-    { MESSAGE_KEY_KEY_COLOR_WARN, watchface_set_color_warn,
-      storage_save_color_warn },
+  // prv_color_from_tuple also tolerates a CString "#rrggbb". The message
+  // keys map 1:1 to ColorSlot order (runtime values: no static initializer).
+  const uint32_t color_keys[COLOR_SLOT_COUNT] = {
+    MESSAGE_KEY_KEY_COLOR_TIME, MESSAGE_KEY_KEY_COLOR_VALUE,
+    MESSAGE_KEY_KEY_COLOR_LABEL, MESSAGE_KEY_KEY_COLOR_HEADER,
+    MESSAGE_KEY_KEY_COLOR_WARN,
   };
-  for (unsigned i = 0; i < sizeof(color_keys) / sizeof(color_keys[0]); i++) {
-    Tuple *t = dict_find(iter, color_keys[i].key);
+  for (int i = 0; i < COLOR_SLOT_COUNT; i++) {
+    Tuple *t = dict_find(iter, color_keys[i]);
     if (t) {
       GColor c = prv_color_from_tuple(t);
-      color_keys[i].set(c);
-      color_keys[i].save(c);
+      watchface_set_color((ColorSlot)i, c);
+      storage_save_color((ColorSlot)i, c);
     }
   }
 
@@ -149,7 +139,7 @@ static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
 
   // Per-panel metrics masks — Clay "checkboxgroup" sends one Int32 (0/1) per
   // item at consecutive keys (KEY_X_METRICS + i)
-    uint32_t med_mask = watchface_get_med_metrics();
+  uint32_t med_mask = watchface_get_med_metrics();
   uint32_t new_med = prv_merge_mask(iter, MESSAGE_KEY_KEY_MED_METRICS, 8,
                                     med_mask);
   if (new_med != med_mask) {
