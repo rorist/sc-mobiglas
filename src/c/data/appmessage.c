@@ -2,6 +2,7 @@
 #include "storage.h"
 #include "../watchface.h"
 #include "../panels/environ_panel.h"
+#include "../panels/medical_panel.h"
 #include <stdlib.h>
 
 // ---------------------------------------------------------------------------
@@ -161,6 +162,22 @@ static void prv_inbox_received(DictionaryIterator *iter, void *ctx) {
   if (new_sys != sys_mask) {
     watchface_set_sys_metrics(new_sys);
     storage_save_sys_metrics(new_sys);
+  }
+
+  // Debug health overrides — CLI/emulator-only channel (no Clay UI).
+  // One Int32 per MEDICAL metric: >= 0 sets the override, < 0 clears it.
+  // Native units: bpm, steps, seconds, meters, kcal.
+  const uint32_t dbg_keys[8] = {
+    MESSAGE_KEY_KEY_DEBUG_BPM, MESSAGE_KEY_KEY_DEBUG_STEPS,
+    MESSAGE_KEY_KEY_DEBUG_SLEEP, MESSAGE_KEY_KEY_DEBUG_KCAL,
+    MESSAGE_KEY_KEY_DEBUG_DISTANCE, MESSAGE_KEY_KEY_DEBUG_ACTIVE,
+    MESSAGE_KEY_KEY_DEBUG_RKCAL, MESSAGE_KEY_KEY_DEBUG_DSLEEP,
+  };
+  for (int i = 0; i < 8; i++) {
+    Tuple *t = dict_find(iter, dbg_keys[i]);
+    if (t) {
+      medical_panel_set_debug(i, t->value->int32);
+    }
   }
 
   // Config — Clay sends each toggle as Int32 (1/0); rebuild the bitmask

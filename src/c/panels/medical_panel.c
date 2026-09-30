@@ -28,6 +28,21 @@ static void prv_fill_metric(int idx);
 static Layer *s_layer;
 static MedSlot s_slots[MED_METRIC_COUNT];
 
+// Debug health overrides (CLI/emulator channel): the emulator provides no
+// health data, so MEDICAL would only ever show "---". val >= 0 replaces the
+// health API read for that metric (native units: bpm, steps, seconds,
+// meters, kcal), val < 0 clears the override. Never persisted, seeded
+// once per app run — overrides SURVIVE panel rebuilds (same contract as
+// the environ statics); a fresh install resets them naturally.
+static int32_t s_debug_val[MED_METRIC_COUNT];
+static bool s_debug_seeded = false;
+
+void medical_panel_set_debug(int idx, int32_t val) {
+  if (idx < 0 || idx >= MED_METRIC_COUNT) return;
+  s_debug_val[idx] = val;
+  if (s_layer) layer_mark_dirty(s_layer);
+}
+
 static void prv_clamp_pct(MedSlot *s, int pct) {
   if (pct < 0) pct = 0;
   if (pct > 100) pct = 100;
@@ -52,7 +67,9 @@ static void prv_fill_hr(int idx) {
   MedSlot *s = &s_slots[idx];
   s->label = "BPM";
   s->label_short = "BP";
-  HealthValue hr = health_service_peek_current_value(HealthMetricHeartRateBPM);
+  HealthValue hr = (s_debug_val[idx] >= 0)
+      ? (HealthValue)s_debug_val[idx]
+      : health_service_peek_current_value(HealthMetricHeartRateBPM);
   int bpm = (int)hr;
   bool normal = (bpm >= 50 && bpm <= 100);
   if (bpm > 0) {
@@ -73,7 +90,9 @@ static void prv_fill_sum_int(int idx, const char *label,
   MedSlot *s = &s_slots[idx];
   s->label = label;
   s->label_short = label_short;
-  HealthValue v = health_service_sum_today(metric);
+  HealthValue v = (s_debug_val[idx] >= 0)
+      ? (HealthValue)s_debug_val[idx]
+      : health_service_sum_today(metric);
   if (v > 0) {
     if (km) {
       snprintf(s->value, sizeof(s->value), "%d.%dkm",
@@ -96,7 +115,9 @@ static void prv_fill_duration(int idx, const char *label,
   MedSlot *s = &s_slots[idx];
   s->label = label;
   s->label_short = label_short;
-  HealthValue secs = health_service_sum_today(metric);
+  HealthValue secs = (s_debug_val[idx] >= 0)
+      ? (HealthValue)s_debug_val[idx]
+      : health_service_sum_today(metric);
   if (secs > 0) {
     int h = (int)secs / 3600;
     int m = ((int)secs % 3600) / 60;
@@ -265,6 +286,14 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
 }
 
 Layer *medical_panel_create(GRect bounds) {
+  // Seed once: panel rebuilds (config changes) must NOT clear live debug
+  // values — same survive-rebuilds contract as the environ statics.
+  if (!s_debug_seeded) {
+    for (int i = 0; i < MED_METRIC_COUNT; i++) {
+      s_debug_val[i] = -1;  // no override
+    }
+    s_debug_seeded = true;
+  }
   s_layer = layer_create(bounds);
   layer_set_update_proc(s_layer, prv_update_proc);
   prv_refresh_health();

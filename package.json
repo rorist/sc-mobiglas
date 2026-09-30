@@ -59,7 +59,15 @@
       "KEY_COLOR_WARN",
       "KEY_MED_METRICS[8]",
       "KEY_ENV_METRICS[6]",
-      "KEY_SYS_METRICS[2]"
+      "KEY_SYS_METRICS[2]",
+      "KEY_DEBUG_BPM",
+      "KEY_DEBUG_STEPS",
+      "KEY_DEBUG_SLEEP",
+      "KEY_DEBUG_KCAL",
+      "KEY_DEBUG_DISTANCE",
+      "KEY_DEBUG_ACTIVE",
+      "KEY_DEBUG_RKCAL",
+      "KEY_DEBUG_DSLEEP"
     ],
     "resources": {
       "media": [
