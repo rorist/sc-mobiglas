@@ -20,78 +20,78 @@ layout, Rajdhani font, cyan-on-black palette.
 
 ## Visual Design
 
-### Color Palette (defined in `watchface.h`)
+### Color Palette (`watchface.h`)
 
-| Token            | Pebble constant                                 | Exact hex | Usage                                     |
-| ---------------- | ----------------------------------------------- | --------- | ----------------------------------------- |
-| `COLOR_PRIMARY`  | `GColorVividCerulean`                           | `#00aaff` | Borders, icons, chrome                    |
-| `COLOR_GAUGE_BG` | `GColorCobaltBlue`                              | `#0055aa` | Ring gauge tracks                         |
-| `COLOR_BG`       | `GColorBlack`                                   | `#000000` | Window background                         |
-| `COLOR_PANEL_BG` | `PBL_IF_BW_ELSE(GColorBlack, GColorOxfordBlue)` | `#000055` | Panel fill (black on flint)               |
-| `COLOR_WARN`     | `GColorOrange`                                  | `#ff5500` | RAIN/SNOW icons, low battery, HR abnormal |
-| `COLOR_SAFE`     | `GColorMalachite`                               | `#00ff55` | Charging battery, HR normal ring          |
-| `COLOR_ALERT`    | `GColorRed`                                     | `#ff0000` | STORM icon                                |
+| Token            | Definition                                      | Usage                                         |
+| ---------------- | ----------------------------------------------- | --------------------------------------------- |
+| `COLOR_PRIMARY` | `GColorVividCerulean` `#00aaff`               | Borders, icons, chrome                        |
+| `COLOR_GAUGE_BG`| `GColorCobaltBlue` `#0055aa`                  | Ring gauge tracks (color platforms)          |
+| `COLOR_BG`      | `GColorBlack`                                 | Window background                             |
+| `COLOR_PANEL_BG`| `PBL_IF_BW_ELSE(GColorBlack, GColorOxfordBlue)`| Panel fill (gabbro: global background)        |
+| `COLOR_WARN`    | `PBL_IF_BW_ELSE(GColorWhite, GColorOrange)`    | RAIN/SNOW, low battery, HR abnormal, COM ERR  |
+| `COLOR_SAFE`    | `PBL_IF_BW_ELSE(GColorWhite, GColorMalachite)` | Charging battery, HR normal                   |
+| `COLOR_ALERT`   | `PBL_IF_BW_ELSE(GColorWhite, GColorRed)`       | STORM icon                                    |
 
-Configurable text colors (runtime via `watchface_get_color_*()` getters, defaults in
-`watchface.h`, Clay pickers, storage-persisted):
-`COLOR_TIME` Celeste `#aaffff` · `COLOR_VALUE` White `#ffffff` · `COLOR_LABEL` PictonBlue
-`#55aaff` · `COLOR_HEADER` VividCerulean `#00aaff` · `COLOR_WARN` Orange `#ff8800`
-(note: configurable warn color `#ff8800` ≠ system `GColorOrange` `#ff5500`)
+On flint (1-bit) orange/red binarize to black on black = invisible → semantic colors are
+clamped to white **in `watchface.h`**; the gauge track is handled in `medical_panel.c`
+(see Multi-platform).
 
-**Flint (B&W):** user-configurable colors are clamped to white in `watchface.c` when too dark
-(black text on black panels would be invisible).
+**Configurable text colors — ColorSlot (table-driven):** enum `COLOR_SLOT_TIME / VALUE /
+LABEL / HEADER / WARN` (`COLOR_SLOT_COUNT`), defaults `COLOR_*_DEFAULT`: Celeste
+`#aaffff` · White `#ffffff` · PictonBlue `#55aaff` · VividCerulean `#00aaff` ·
+Orange `#ff8800`. Access: `watchface_get_color(slot)` / `watchface_set_color(slot, …)`
+plus named getters; persisted as argb per slot (`storage_load/save_color`); Clay keys map
+1:1 (see Config). flint: dark user colors are clamped to white in `watchface.c`
+(`prv_clamp_bw()`, single choke point).
 
 > Never hardcode hex values — always reference `watchface.h` constants.
 
 ### Typography
 
-- **Font:** Rajdhani medium, loaded with `fonts_load_custom_font()` via `fonts_get()` helper
-  in `ui/fonts.c`
-- **Resources declared in `package.json`:** `FONT_RAJDHANI_14`, `FONT_RAJDHANI_18`,
-  `FONT_RAJDHANI_40`, `FONT_RAJDHANI_48`, `FONT_RAJDHANI_50`, `FONT_RAJDHANI_60`
-- **FontSize enum (`ui/fonts.h`):**
-  - `FONT_SIZE_HEADER` = 14px — panel headers, small text
-  - `FONT_SIZE_VALUE` = 18px — panel values, date
-  - `FONT_SIZE_TIME` = 50px — HH:MM with logo (flint: 40px)
-  - `FONT_SIZE_TIME_BIG` = 60px — HH:MM without logo (flint: 48px)
-- **Fallback:** system Gothic 14 / 18 if custom font unavailable
-- **Leading compensation (`FONT_LEADING_*`):** large Rajdhani sizes reserve empty space above
-  glyphs — text rects are shifted UP by `FONT_LEADING_14=2, FONT_LEADING_18=3,
-FONT_LEADING_50/60` (values differ flint vs emery/gabbro) so glyphs align with the intended
-  visual top.
-
-> **Font subset:** 14/18 use `characterRegex = "[0-9:A-Za-z /.%°-]"` (degree symbol included);
-> 40/48/50/60 are digits only `[0-9: ]`. Unicode symbols (◈ ◉ ⬡ ♥) are **not** in the subset
-> and cannot render in Rajdhani — decorative glyphs must be drawn as primitives
-> (see icon functions in `ui/draw_utils.c`).
+- **Font:** Rajdhani medium, loaded via `fonts_get(FontSize)` in `ui/fonts.c`
+- **Resources (package.json — one TTF, subset by size suffix):** 12 / 14 / 18 / 40 / 48 /
+  50 / 60 / 72 / 80
+- **FontSize enum (`ui/fonts.h`):** `FONT_SIZE_HEADER` 14 · `FONT_SIZE_VALUE` 18 ·
+  `FONT_SIZE_TIME` 50 (with logo) · `FONT_SIZE_TIME_BIG` 60 · `FONT_SIZE_TIME_HUGE` 72 ·
+  `FONT_SIZE_TIME_MASSIVE` 80 (hero) · `FONT_SIZE_TIME_SMALL` 40 · `FONT_SIZE_METRIC` 12
+- **flint loading:** skips the unused 18px face; TIME→40, BIG→48, HUGE/MASSIVE alias→48,
+  SMALL→40 — one `fonts_load_custom_font()` per face, deinit dedupes. gabbro also loads
+  SMALL (logo mode). Other platforms load all faces.
+- **Leading compensation (`FONT_LEADING_*`):** Rajdhani reserves empty space above glyphs —
+  text rects are shifted UP by the leading so glyphs align with the intended visual top.
+  12=2 · 14=2 · 18=3 · 40=6 (all platforms); 50/60/72/80: flint 6/7/7/7 (HUGE/MASSIVE map to
+  the 48px face), emery/gabbro 7/9/11/12.
+- **Subsets:** 12/14/18 = `[0-9:A-Za-z /.%°-]`; 40–80 = digits `[0-9: ]`. Unicode symbols
+  (◈ ◉ ⬡ ♥) are **not** in the subset — decorative glyphs are drawn as primitives
+  (`ui/draw_utils.c`).
+- **Fallback:** system Gothic 14/18 if a custom font is unavailable.
 
 ### Panel Aesthetic (mobiGlas)
 
-- **Rounded corners, radius 3:** panel fill via `graphics_fill_rect(..., 3, GCornersAll)` +
-  border via `graphics_draw_round_rect(..., 3)` — drawn by `draw_panel_fill()` /
-  `draw_panel_border()` in `ui/draw_utils.c` (`draw_corner_accents()` still exists but is
-  **not called**)
-- Header (drawn by `draw_panel_header()` / `draw_panel_header_ex()`): vertical accent bar +
-  left-aligned uppercase label + partial underline + diagonal ↗ arrow glyph at top-right.
-  `_ex` variant adds a right-aligned label (e.g. `BAT: 87%` in SYSTEMS header)
-- Panel fill: `COLOR_PANEL_BG` (`#000055`, black on flint)
-- All coordinates relative to `layer_get_bounds(layer)`; content starts at y+16
-  (`panel_content_rect()` in `panels/panel.h`)
+- **Chrome per platform** — `panel_draw_chrome()` (`panels/panel.h`): emery/flint = panel
+  fill (`COLOR_PANEL_BG`) + rounded border r3 (`draw_panel_fill()` /
+  `draw_panel_border()`); gabbro = no-op (global background + separators, see
+  Multi-platform)
+- Headers: `draw_panel_header()` / `draw_panel_header_ex()` — accent bar + uppercase label
+  + partial underline + ↗ arrow; `_ex` adds a right-aligned label (available, currently
+  unused)
+- Content rect `panel_content_rect()` (panel.h): x+4, y+16, w−8; height flint −16 /
+  others −20
+- `draw_corner_accents()` has been **deleted** (dead code, 2026-09-30)
 
-### mobiGlas Reference Layout (emery, all panels on)
+### Reference layout (emery, all panels on)
 
 ```
 ┌─────────────────────────────────┐
-│  21:47                 [LOGO]   │
-│  WED 01 JUL                     │
+│ NAVCOMP    21:47         [LOGO] │
+│            WED 01 JUL           │
 ├───────────────┬─────────────────┤
 │ MEDICAL       │ ENVIRON         │
-│   ◎ dual ring │ 12°C  [icon]    │
-│  BPM   STEPS  │ 12km/h 62% UV4  │
-│               │ ↑06:12 ↓20:44   │
+│  ◎ ◎ rings    │ ☁ 12°C ↗ 12km/h │
+│  BPM   STEPS  │ 💧 62% · UV 4   │
+│               │ ☀ 06:12 ☾ 20:44 │
 ├───────────────┴─────────────────┤
-│ SYSTEMS                  BAT 87%│
-│ [▓▓▓▓▓▓▓░░░░]                   │
+│ SYSTEMS  BAT 100% ▮▮▮▯▯  COM OK │
 └─────────────────────────────────┘
 ```
 
@@ -99,162 +99,145 @@ FONT_LEADING_50/60` (values differ flint vs emery/gabbro) so glyphs align with t
 
 ## Layout Specification
 
-### Dynamic Layout Engine (`layout.c`)
+### Dynamic layout engine (`layout.c`)
 
-`layout_compute(screen_bounds, config)` returns a `LayoutInfo` struct (`visible[]`, `rects[]`,
-`panel_count`) with a `GRect` per visible panel. Panels toggled via config bitmask bits 2–4.
+`layout_compute(screen_bounds, config)` returns a `LayoutInfo` (visible[], rects[],
+panel_count). Panels toggle via config bitmask bits 2–4 (PANEL_TIME is always visible).
 
-**Screen dims are platform-aware** — panel widths are derived at runtime from the screen
-bounds; only margins/gaps/min heights are fixed. `MARGIN = PBL_IF_ROUND_ELSE(24, 3)`,
-`PANEL_GAP = 2`.
+- **Margins/gaps (`watchface.h`):** flint MARGIN 2 / PANEL_GAP 1; else
+  `PBL_IF_ROUND_ELSE(24, 3)` / 2
+- **Min heights (`watchface.h`):**
 
-#### Panel minimum heights (`watchface.h`, per platform)
+| Panel   | emery / gabbro | flint                      |
+| ------- | -------------- | -------------------------- |
+| TIME    | 88             | 74 (48px face + 14px date) |
+| MEDICAL | 70             | 56                         |
+| ENVIRON | 70             | 56                         |
+| SYSTEMS | 32             | 32                         |
 
-| Panel   | emery / gabbro            | flint          |
-| ------- | ------------------------- | -------------- |
-| TIME    | 88 (60px font)            | 70 (48px font) |
-| MEDICAL | 70                        | 58             |
-| ENVIRON | 70                        | 58             |
-| SYSTEMS | 32 (BAT inline in header) | 24             |
+flint mins sum to the exact available height (168 − 2×2 − 2×1 = 162).
 
-#### Row structure
-
-| Row | Panels                                            | Width       |
-| --- | ------------------------------------------------- | ----------- |
-| 0   | TIME (always)                                     | full width  |
-| 1   | MEDICAL + ENVIRON side-by-side, or one full-width | half / full |
-| 2   | SYSTEMS                                           | full width  |
-
-#### Rules
-
-- TIME is always visible, never disabled
-- Both MEDICAL + ENVIRON → side-by-side; only one → full-width
-- SYSTEMS always at bottom row; surplus height distributed evenly across active rows
-- TIME alone → vertically centered on screen
-- Each panel's content auto-centers within its dynamic bounds
+- **Rows:** 0 = TIME (full width) · 1 = MEDICAL + ENVIRON side-by-side (solo → full width) ·
+  2 = SYSTEMS (bottom)
+- **Surplus height:** non-flint → **all to TIME** (other panels stay at min) so combo screens
+  get a bigger clock; flint → split evenly across rows; deficit → proportional shrink
+- **TIME alone** → vertically centered (hero, see Multi-platform)
+- **gabbro (round):** chord-aware width per row (`round_chord_width()` — custom integer
+  sqrt, firmware ships no libm `sqrt`) + 16px vertical edge insets; rows narrower than full
+  width are centered
 
 ### Multi-platform rendering (flint / emery / gabbro)
 
-- **Dispatch:** `PBL_DISPLAY_WIDTH` (flint 144 < 200 ≤ emery, gabbro 260) and
-  `PBL_ROUND` / `PBL_IF_ROUND_ELSE` / `PBL_IF_BW_ELSE` — never hardcode screen dims
-- **Chrome per platform** (`panel_draw_chrome()` / `watchface.c`): emery/flint keep
-  bordered rounded panels on black; gabbro draws a global `COLOR_PANEL_BG` full-screen
-  background plus separator lines (H lines at inter-row gaps, V line between
-  MEDICAL/ENVIRON inset 4px from the H lines) on a dedicated separator layer — round
-  panels are borderless (user: no "boxed" look on round)
-- **Layout** (`layout.c`): flint uses MARGIN 2 / PANEL_GAP 1 with min heights
-  74/56/56/32 summing EXACTLY to the available height (162px, no surplus branch);
-  non-flint gives ALL surplus height to TIME (MED/ENV/SYS stay at minimum) so combo
-  screens get a bigger clock. Gabbro (round) computes a chord-aware width per row
-  (`round_chord_width()` — custom integer sqrt, no libm: firmware ships no `sqrt`)
-  plus vertical edge insets (16px) so TIME and SYSTEMS stay inside the bezel;
-  narrower rows are horizontally centered. `panel_content_rect()` = flint h−16 /
-  other h−20
-- **Time fonts** (`time_panel.c`): with date, ladder by content height: ≥89 → 72px,
-  ≥77 → 60px, ≥61 → 40px (SMALL), else 50px; no date → 80/72/60px. Hero (gate at
-  content ≥ 120px) shows MASSIVE 80px when the block fits with a 2px cushion, and
-  downscales or hides the logo otherwise. Flint: logo zone 36px (logos downscaled by
-  `prv_draw_bitmap_scaled()` — bpp-aware nearest-neighbor, ImageMagick logos decode
-  as 4-bit palette), time 40px, date 14px (`FONT_SIZE_HEADER`)
-- **ENVIRON** (`environ_panel.c`): wide panels (≥ 120px) use a left-aligned flow
-  layout (`prv_draw_flow()`): items measured by `prv_item_need_w()` and wrapped like
-  text — layout wraps on the strict width, +5 drawing slack guards against
-  `get_content_size` underestimates. Narrow panels pack pairs with MEASURED splits
-  (no blind 50/50); a k-fulls packer deploys WEATHER first, then WIND, each on its
-  own row only while vertical budget remains (pass k keeps the first k fulls —
-  priority weather > wind). Degradations: condition abbreviations
-  (CLR/CLD/FOG/RN/SNW/STM/N-A), wind short "12km/h", halves without icons < 40px.
-  The condition survives panel rebuilds via the `s_cond_raw` static (like temp/wind)
-- **MEDICAL** (`medical_panel.c`): ring ladder — ring ≥ 28px → value centered
-  inside + label below; ring < 28px (flint) → 2-letter label (BP/ST/SL/KC/KM/AC/RK/
-  DP) inside the ring + value below, both 12px `FONT_SIZE_METRIC`. Full mode caps
-  the ring count so every cell keeps ≥ 44px
-- **SYSTEMS**: COM sits left-aligned when BAT is hidden (solo COM)
-- **Fonts:** `FONT_RAJDHANI_12` (`FONT_SIZE_METRIC`, `FONT_LEADING_12` = 2) shared
-  by ENVIRON small rows and MEDICAL tier-B labels; flint also loads TIME_SMALL (40px)
-  for the logo mode
-- **1-bit gauge track:** `PBL_IF_BW_ELSE(GColorWhite, COLOR_GAUGE_BG)` in
-  `medical_panel.c` (#0055aa binarizes to black = invisible). Semantic colors
-  (WARN/ALERT/SAFE) are clamped to white on flint in watchface.h
-- **Regression guard:** emery rendering must stay pixel-identical — all narrow/tier
-  thresholds are sized so emery cells never hit them (verified via captures)
+- **Dispatch:** `PBL_DISPLAY_WIDTH` (flint 144 < 200 ≤ emery, gabbro 260) and `PBL_ROUND` /
+  `PBL_IF_ROUND_ELSE` / `PBL_IF_BW_ELSE` — never hardcode screen dims
+- **Chrome** (`watchface.c`): emery/flint = bordered panels on black; gabbro = global
+  `COLOR_PANEL_BG` full-screen background + separator layer (H lines at inter-row gaps, V
+  line between MEDICAL/ENVIRON inset 4px) — no boxed look on round
+- **Time fonts** (`time_panel.c`): ladder rungs check content height AND width ≥
+  `prv_time_max_w(face)` (worst-case "04:44": 92@40 / 115@50 / 138@60 / 165@72 / 184@80):
+  with date → ≥89→72px · ≥77→60px · ≥61→40px SMALL · else 50px; no date → 80/72/60px.
+  Hero (content ≥ 120 high): 80px MASSIVE when the block fits with a 2px cushion, else lower
+  rungs. flint: time 40px, logo zone 36px, date 14px (`FONT_SIZE_HEADER`)
+- **Logo rendering:** zone capped 64px (flint 36px); 3-gaps centering anchors the logo right
+  so outer margins stay equal whatever the digits. Downscaled logos are **cached per
+  (logo, size)** on color platforms (`prv_scale_logo()` — bpp-aware nearest-neighbor,
+  partial alpha dithered 50%, a≤1 skipped); 1-bit flint draws per-pixel each frame — no cache
+  (a cached 1-bit logo renders as a white box). Hero downscales the logo to fit (hidden if
+  < 20px remain)
+- **ENVIRON** (`environ_panel.c`): wide (≥ 120px) = left-aligned flow, items measured by
+  `prv_item_need_w()` and wrapped (strict width for layout, +5/+7 drawing slack); narrow =
+  pair packing with measured splits + k-fulls packer (WEATHER first, then WIND, own rows
+  while vertical budget lasts); lone half left-aligned. Degradations measured: condition
+  full → abbrev (CLR/CLD/FOG/RN/SNW/STM/N-A) → icon only; wind long → "12km/h" → icon
+  dropped. flint: icons → 2px dots (`ENV_ICON_W` 4, `ENV_WIDE_MIN` 34); sunrise/sunset
+  dropped side-by-side
+- **MEDICAL** (`medical_panel.c`): ring ladder — ring ≥ 28px → value inside + label below;
+  < 28px → 2-letter label (BP/ST/SL/KC/KM/AC/RK/DP) inside + value below (12px METRIC).
+  Full mode caps the ring count so each cell ≥ 44px. Gauge track on flint:
+  `PBL_IF_BW_ELSE(GColorWhite, COLOR_GAUGE_BG)` (#0055aa binarizes to black)
+- **SYSTEMS:** solo COM → left-aligned
+- **Regression guard:** emery rendering must stay pixel-identical — thresholds are sized so
+  emery cells never hit the degraded rungs (verified via captures)
 
 ---
 
-## Config — Clay (phone) → bitmask (watch)
+## Config — Clay (phone) → watch
 
 Settings use **Clay for Pebble** (`@rebble/clay`) — page auto-generated from
-`src/pkjs/config.js`; Clay handles `showConfiguration` / `webviewclosed`,
-persists to phone localStorage and re-sends config on app launch.
+`src/pkjs/config.js`. Sections: **Time** (12h/24h, show date, logo picker 9 logos + None) ·
+**Panels** (MEDICAL/ENVIRON/SYSTEMS toggles + 3 checkboxgroups: 8/6/2 metrics) ·
+**Weather** (°C/°F) · **Colors** (5 pickers + reset button wired by `custom-clay.js`
+customFn).
 
-**Settings options:** 12h/24h · °C/°F · MEDICAL/ENVIRON/SYSTEMS panel toggles ·
-constructor logo picker (9 logos + None) · 5 color pickers + "reset colors" button
-(wired by `src/pkjs/custom-clay.js`).
+**C-side config bitmask** (`watchface.h`, single canonical definition): bit 0
+`CONFIG_12H` · 1 `CONFIG_FAHRENHEIT` · 2 `CONFIG_MEDICAL` · 3 `CONFIG_ENVIRON` ·
+4 `CONFIG_SYSTEMS`; default = all panels on, 24h, °C. Toggles merged by `prv_merge_mask()`
+in `appmessage.c` (absent tuple = bit kept). `watchface_get_config()` is the source of
+truth. Capabilities: `["health", "configurable", "location"]`.
 
-**package.json messageKeys:** `KEY_TEMP:0`, `KEY_WEATHER:1`, `KEY_REQUEST_WEATHER:2`,
-`KEY_12H:5`, `KEY_FAHRENHEIT:6`, `KEY_SHOW_MEDICAL:7`, `KEY_SHOW_ENVIRON:8`,
-`KEY_SHOW_SYSTEMS:9`, `KEY_WIND_SPEED:10`, `KEY_WIND_DIR:11`, `KEY_HUMIDITY:12`,
-`KEY_UV:13`, `KEY_SUNRISE:14`, `KEY_SUNSET:15`, `KEY_LOGO:16`, `KEY_COLOR_TIME:17`,
-`KEY_COLOR_VALUE:18`, `KEY_COLOR_LABEL:19`, `KEY_COLOR_HEADER:20`, `KEY_COLOR_WARN:21`.
-(No `KEY_CONFIG` bitmask over AppMessage — Clay sends one message per key.)
+**Metrics masks** (feature #13): one uint8 per panel — storage keys 9/10/11, defaults
+MED `0x03` (BPM+STEPS) / ENV `0x3F` (all 6) / SYS `0x03` (BAT+COM). Bits — MED: BPM,
+STEPS, SLEEP, KCAL, DISTANCE, ACTIVE, RKCAL, DEEP_SLEEP; ENV: WEATHER, WIND, HUM, UV,
+SUNRISE, SUNSET; SYS: BAT, COM.
 
-**C-side bitmask** (single canonical definition, `watchface.h`) — rebuilt from
-the individual Clay toggles by `prv_apply_toggle()` in `appmessage.c`:
+**package.json messageKeys (LIST format, 24 entries):** arrays first — `KEY_MED_METRICS[8]`
+= 10000 (items 10000–10007), `KEY_ENV_METRICS[6]` = 10008 (10008–10013),
+`KEY_SYS_METRICS[2]` = 10014 (10014–10015); singles: `KEY_TEMP` 10016 (Int8) ·
+`KEY_WEATHER` 10017 (CString) · `KEY_REQUEST_WEATHER` 10018 (Uint8, watch→phone) ·
+`KEY_SHOW_DATE` 10019 · `KEY_12H` 10020 · `KEY_FAHRENHEIT` 10021 ·
+`KEY_SHOW_MEDICAL/ENVIRON/SYSTEMS` 10022–10024 · `KEY_WIND_SPEED` 10025 (Int16) ·
+`KEY_WIND_DIR` 10026 (Int16) · `KEY_HUMIDITY` 10027 (Int8) · `KEY_UV` 10028 (Int8) ·
+`KEY_SUNRISE`/`KEY_SUNSET` 10029/10030 (CString "HH:MM") · `KEY_LOGO` 10031 (CString
+"0"–"9") · `KEY_COLOR_TIME/VALUE/LABEL/HEADER/WARN` 10032–10036 (Int32 0xRRGGBB; Clay
+"color" sends a packed int, CString "#rrggbb" tolerated).
 
-| Bit | Constant            | Default | Meaning             |
-| --- | ------------------- | ------- | ------------------- |
-| 0   | `CONFIG_12H`        | off     | 12-hour time format |
-| 1   | `CONFIG_FAHRENHEIT` | off     | Temperature in °F   |
-| 2   | `CONFIG_MEDICAL`    | on      | Show MEDICAL panel  |
-| 3   | `CONFIG_ENVIRON`    | on      | Show ENVIRON panel  |
-| 4   | `CONFIG_SYSTEMS`    | on      | Show SYSTEMS panel  |
-
-Default: `CONFIG_MEDICAL | CONFIG_ENVIRON | CONFIG_SYSTEMS` (all panels on, 24h, Celsius).
-`watchface_get_config()` is the source of truth. Capabilities:
-`["health", "configurable", "location"]` (`configurable` = settings gear in the Pebble app,
-`location` = GPS for weather).
+- C: use the generated `MESSAGE_KEY_*` macros (appinfo.h) — never hand-write key numbers;
+  PKJS: `require('message_keys')`
+- ⚠️ messageKeys changed → `pebble clean` before build (stale appinfo cache)
+- ⚠️ Rebble Android serializes raw JS booleans badly in AppMessage arrays — `index.js`
+  wraps `Pebble.sendAppMessage` to normalize true/false → 1/0 (permanent workaround)
+- AppMessage buffer: `app_message_open(512, 64)` (inbox = Clay payload, outbox = weather
+  request); callbacks registered before open
 
 ---
 
 ## Data Per Panel
 
-### TIME
+### TIME (`time_panel.c`)
 
-- Line 1: `HH:MM` — 60px centered (50px when a logo is active: fixed 64px logo zone on the
-  right edge, time AND date keep the same position whatever logo is chosen; flint: 48px,
-  no logo — doesn't fit 144px width)
-- Line 2: `DOW DD MON` — 18px, centered, same width as time zone
-- Config: 12/24h via `CONFIG_12H`
+- Header `NAVCOMP`; line 1 `HH:MM`, line 2 `DOW DD MON` (18px VALUE; flint 14px HEADER)
+- Font ladder, hero gate, logo centering/cache: see Multi-platform
+- 12h mode strips the leading zero
 
-### MEDICAL
+### MEDICAL (`medical_panel.c`)
 
-- Header: `MEDICAL`
-- **Dual concentric ring gauge** (`draw_dual_ring()`): outer ring = heart rate %, inner ring
-  = steps %
-  - HR: `health_service_peek_current_value(HealthMetricHeartRateBPM)` mapped 40–180 bpm →
-    0–100%. Ring color: `COLOR_SAFE` (green) if 50–100 bpm, else `COLOR_WARN` (orange)
-  - Steps: `health_service_sum_today(HealthMetricStepCount)` vs daily-average goal
-    (`health_service_sum_averaged(..., HealthServiceTimeScopeDaily)`, fallback 10 000)
-- Layout adapts to width: compact (< 120px) = BPM value centered in ring + steps below;
-  full = BPM in ring + `BPM` / `STEPS` labels below
-- Values fall back to `---` if health data unavailable (ring shows 0%)
+- 8 metrics, table-driven `MedSlot` (label, 2-letter short, value, pct, fill fn): BPM,
+  STEPS, SLEEP, KCAL, DISTANCE, ACTIVE, RKCAL, DEEP_SLEEP
+- Goals via `health_service_sum_averaged(…, HealthServiceTimeScopeDaily)`, fallbacks:
+  10k steps · 8h sleep · 500 kcal · 5 km · 1h active · 1500 rkcal · 2h deep
+- HR 40–180 bpm → 0–100%, ring `COLOR_SAFE` 50–100 bpm else WARN
+- Layout: full (≥ 120px) up to 4 rings (cell ≥ 44px), compact 2 rings; ring tiers: see
+  Multi-platform. Values `---` when health data unavailable
+- Refresh: `prv_refresh_health()` at the top of the update proc + dirty each minute (no
+  health event subscription, no extra wakeups)
 
-### ENVIRON
+### ENVIRON (`environ_panel.c`)
 
-- Header: `ENVIRON`
-- Temperature `{t}°C`/`{t}°F` + 8×8 holo weather icon (via `KEY_TEMP` / `KEY_WEATHER`)
-- Wind speed + direction (with NE arrow icon) (via `KEY_WIND_SPEED` / `KEY_WIND_DIR`)
-- Humidity % + UV index (with drop/UV icons) (via `KEY_HUMIDITY` / `KEY_UV`)
-- Sunrise / sunset `HH:MM` (with sun/moon icons) (via `KEY_SUNRISE` / `KEY_SUNSET`)
-- Setters: `environ_panel_set_weather()`, `set_wind()`, `set_humidity_uv()`, `set_sun()`
-- All fields fall back to `---` / `UNKNOWN` until AppMessage received
+- 6 metrics: WEATHER / WIND (full) · HUM / UV / SUNRISE / SUNSET (half)
+- Layout: flow / pair packing / degradations: see Multi-platform
+- State survives panel rebuilds: `s_cond_raw` + `s_last_temp_c` statics (temp + condition
+  must arrive in the SAME AppMessage)
+- Setters: `environ_panel_set_weather()`, `set_wind()`, `set_humidity_uv()`, `set_sun()`;
+  all fields fall back to `---` / `N/A`
 
-### SYSTEMS
+### SYSTEMS (`systems_panel.c`)
 
-- Header: `SYSTEMS` with right-aligned `BAT: {n}%` (`draw_panel_header_ex()`)
-- Battery bar: 6-segment bar via `draw_battery_bar()` in `draw_utils.c`
-- Semantic colors: green (`COLOR_SAFE`) while charging, orange (`COLOR_WARN`) at ≤ 20%,
-  else `COLOR_PRIMARY`
+- Header `SYSTEMS`; content line: `BAT {n}%` left (VALUE color; SAFE charging / WARN ≤ 20%)
+  + adaptive battery bar (3–6 segments, min 20px) + `COM OK/ERR` right (VALUE / WARN;
+  `draw_comm_icon()`, 2px dot on flint)
+- Solo COM → left-aligned; no metrics → header only
+- Battery via `battery_state_service_peek()`, Bluetooth via
+  `bluetooth_connection_service_peek()`
 
 ---
 
@@ -280,26 +263,6 @@ config.js ───────┼─► index.js ──► AppMessage.send()
                                LayerUpdateProc per panel
 ```
 
-### AppMessage Keys (defined in `package.json` → `messageKeys`)
-
-| Key                                                          | Type                  | Source         | Description                                                             |
-| ------------------------------------------------------------ | --------------------- | -------------- | ----------------------------------------------------------------------- |
-| `KEY_TEMP`                                                   | `Int8`                | weather.js     | Temperature (converted °C/°F phone-side)                                |
-| `KEY_WEATHER`                                                | `CString`             | weather.js     | Condition: `CLEAR`, `CLOUDY`, `FOG`, `RAIN`, `SNOW`, `STORM`, `UNKNOWN` |
-| `KEY_REQUEST_WEATHER`                                        | `Uint8`               | watch → phone  | Watch asks for a weather refresh (every 30 min)                         |
-| `KEY_WIND_SPEED`                                             | `Int16`               | weather.js     | Wind speed km/h                                                         |
-| `KEY_WIND_DIR`                                               | `Int16`               | weather.js     | Wind direction degrees                                                  |
-| `KEY_HUMIDITY`                                               | `Int8`                | weather.js     | Relative humidity %                                                     |
-| `KEY_UV`                                                     | `Int8`                | weather.js     | UV index                                                                |
-| `KEY_SUNRISE` / `KEY_SUNSET`                                 | `CString`             | weather.js     | `"HH:MM"`, formatted phone-side                                         |
-| `KEY_12H`                                                    | `Int32`               | Clay config.js | 12h format toggle (1/0)                                                 |
-| `KEY_FAHRENHEIT`                                             | `Int32`               | Clay config.js | °F toggle (1/0)                                                         |
-| `KEY_SHOW_MEDICAL` / `KEY_SHOW_ENVIRON` / `KEY_SHOW_SYSTEMS` | `Int32`               | Clay config.js | Panel toggles                                                           |
-| `KEY_LOGO`                                                   | `CString` `"0"`–`"9"` | Clay config.js | Constructor logo (9 = None)                                             |
-| `KEY_COLOR_*`                                                | `Int32` `0xRRGGBB`    | Clay config.js | Text colors (CString `#rrggbb` tolerated)                               |
-
-AppMessage buffer: minimum 256 bytes (`app_message_open(256, 256, ...)`).
-
 ---
 
 ## Phone-side (PKJS — `src/pkjs/`)
@@ -314,21 +277,25 @@ AppMessage buffer: minimum 256 bytes (`app_message_open(256, 256, ...)`).
 //   &daily=sunrise,sunset
 // WMO weathercode → label: 0→CLEAR, 1-3→CLOUDY, 45/48→FOG,
 // 51-67→RAIN, 71-77→SNOW, 95-99→STORM
-// Fetch is watch-driven: index.js responds to KEY_REQUEST_WEATHER (no setInterval)
 ```
+
+- Fetch is watch-driven: `index.js` answers `KEY_REQUEST_WEATHER` (no setInterval —
+  phone-side timers are unreliable on Android)
+- **Cache:** localStorage `sc-weather-cache`, TTL 10 min — `fetch()` is cache-first: a
+  relaunch shows the last weather instantly (no `---` flash) and saves API calls
 
 ### config.js + custom-clay.js
 
-- Clay configuration array (`module.exports = [...]`) — NO manual HTML
-- Clay framework auto-generates the page, handles `showConfiguration` /
-  `webviewclosed`, persists to phone localStorage, auto-sends on app launch
-- Options: 12/24h, °C/°F, MEDICAL/ENVIRON/SYSTEMS toggles, logo picker,
-  5 color pickers, reset-colors button (custom-clay.js wires a pure-UI customFn)
+- Clay configuration array (`module.exports`), NO manual HTML; Clay auto-generates the
+  page, handles `showConfiguration`/`webviewclosed`, persists to phone localStorage,
+  auto-sends on app launch
+- Reset-colors button = pure UI (no messageKey) + `custom-clay.js` customFn resets the 5
+  pickers to defaults on click (user clicks reset then Save)
 
 ### index.js
 
-- Keep thin: subscribe to `ready` / `appmessage` (weather fetch on `KEY_REQUEST_WEATHER`)
-- Delegate all logic to `weather.js` / `config.js`
+- Keep thin: `new Clay(clayConfig, customFn)` + `ready` / `appmessage` listeners
+- `sendAppMessage` wrapper normalizes booleans (Android workaround, see Config)
 
 ---
 
@@ -338,37 +305,35 @@ AppMessage buffer: minimum 256 bytes (`app_message_open(256, 256, ...)`).
 
 ```c
 // Every panel: LayerUpdateProc owns GRect bounds
-// 1. panel_draw_chrome(ctx, bounds, color) — fill + rounded border (panels/panel.h)
-// 2. panel_draw_header_full(...) / panel_draw_header_with_right(...)
-// 3. render content directly with graphics_draw_text() / primitives in the update proc
+// 1. panel_draw_chrome(ctx, bounds, color) — per-platform fill + border (panel.h)
+// 2. panel_draw_header_full(...) (panel.h inline helpers)
+// 3. render content with graphics_draw_text() / primitives in the update proc
 // All coordinates relative to layer_get_bounds(layer)
 ```
 
 ### Key functions in `ui/draw_utils.c`
 
-- `draw_panel_fill()` / `draw_panel_border()` — rounded (r3) panel fill + border
-- `draw_corner_accents()` — L-shaped corner marks (**unused**, kept for reference)
-- `draw_panel_header()` / `draw_panel_header_ex()` — accent bar + label + partial underline
-  - ↗ arrow; `_ex` adds right-aligned label
-- `draw_battery_bar()` — 6-segment battery indicator
-- `draw_ring_gauge()`, `draw_dual_ring()` — circular gauges (MEDICAL)
-- `draw_weather_icon()` — 8×8 holo icons, 7 conditions (CLEAR/CLOUDY/FOG/RAIN/SNOW/STORM/UNKNOWN)
-- `draw_sun_icon()`, `draw_drop_icon()`, `draw_wind_icon()`, `draw_uv_icon()` — 8×8 holo icons
+- `draw_panel_fill()` / `draw_panel_border()` — rounded (r3)
+- `draw_panel_header()` / `draw_panel_header_ex()` — accent bar + label + underline + ↗
+- `draw_battery_bar(ctx, bounds, percent, color)` — adaptive 3–6 segments
+- `draw_ring_gauge(ctx, box, percent, thickness, track, fill)` — circular gauge (MEDICAL)
+- `draw_weather_icon(ctx, origin, cond_idx)` — 8×8 holo; severity: RAIN/SNOW WARN ·
+  STORM ALERT · else label color
+- `draw_sun_icon()`, `draw_drop_icon()`, `draw_wind_icon()`, `draw_uv_icon()` — 8×8 holo
+- `draw_comm_icon(ctx, origin)` — antenna, stroke color set by the caller
 
 > Never add a function to `draw_utils.c` that duplicates logic already in `panel.h`.
-> Use Serena `find_symbol` / `find_referencing_symbols` before creating any new helper.
+> Use `find_symbol` / `find_referencing_symbols` before creating any new helper.
 
 ### Timing
 
-- `tick_timer_service_subscribe(MINUTE_UNIT)` — minute ticks update TIME panel (no seconds
-  display → no per-second wakeups, battery-friendly)
-- MEDICAL: `prv_refresh_health()` called in the panel's update proc (refresh on every redraw;
-  health_service_peek/sum are cheap cached reads; no health event subscription, no extra
-  wakeups)
-- Weather: watch-driven refresh — `watchface_tick` sends `KEY_REQUEST_WEATHER` outbox every
-  30 min (`tm_min % 30 == 0`); PKJS `appmessage` listener triggers the Open-Meteo fetch
-  (phone-side setInterval unreliable)
-- Config / panel toggles / colors / logo: event-driven via AppMessage (no polling)
+- `tick_timer_service_subscribe(MINUTE_UNIT)` — minute ticks update TIME (no seconds → no
+  per-second wakeups)
+- MEDICAL: `prv_refresh_health()` in the update proc (cheap cached reads) + dirty each
+  minute; no health event subscription
+- Weather: watch-driven — `watchface_tick` sends `KEY_REQUEST_WEATHER` every 30 min
+  (`tm_min % 30 == 0`); PKJS `appmessage` listener triggers the Open-Meteo fetch
+- Config / toggles / colors / logo: event-driven via AppMessage (no polling)
 
 ### Health API (correct function names)
 
@@ -384,44 +349,25 @@ HealthValue avg = health_service_sum_averaged(
   HealthMetricStepCount, start, now, HealthServiceTimeScopeDaily);
 ```
 
-Requires `"health"` in `capabilities` in `package.json` (already set).
-Always check `HealthServiceAccessibilityMaskAvailable` before reading. Fallback: `"---"`.
+Requires `"health"` in `capabilities` (already set). Always check
+`HealthServiceAccessibilityMaskAvailable` before reading. Fallback: `"---"`.
 
 ---
 
-## Serena MCP — Tooling (priority over bash/grep/cat/find)
+## Serena MCP — Tooling
 
-Always use Serena to navigate and edit this project. Do NOT use bash, grep, cat,
-find, sed or ls for file operations unless Serena cannot do the task.
+Use Serena tools (via `execute` → `tools.serena.*`) for navigation and edits; bash is
+reserved for build/run commands (`pebble build` — ALWAYS alone, never piped).
 
-| Use case                                             | Tool                                           |
-| ---------------------------------------------------- | ---------------------------------------------- |
-| List files in a directory                            | `list_dir`                                     |
-| Find a file by name/mask                             | `find_file`                                    |
-| Read a file                                          | `read_file`                                    |
-| File overview (symbols: functions, classes, structs) | `get_symbols_overview`                         |
-| Find a symbol (function, variable, struct)           | `find_symbol`                                  |
-| Search text/regex pattern in code                    | `search_for_pattern`                           |
-| Check all usages before refactoring                  | `find_referencing_symbols`                     |
-| Navigate to a symbol's declaration                   | `find_declaration`                             |
-| Replace a symbol's body                              | `replace_symbol_body`                          |
-| Insert code before/after a symbol                    | `insert_before_symbol` / `insert_after_symbol` |
-| Generic replacement (literal or regex)               | `replace_content`                              |
-| Rename a symbol across the codebase                  | `rename_symbol`                                |
-| Create a new file                                    | `create_text_file`                             |
-| Build diagnostics for a file                         | `get_diagnostics_for_file`                     |
-| Read/write project memories                          | `read_memory` / `write_memory`                 |
+Key tools: `read_file` · `list_dir` · `find_file` · `get_symbols_overview` ·
+`find_symbol` (arg = `name_path_pattern`) · `search_for_pattern` ·
+`find_referencing_symbols` · `replace_content` (literal needles; repl = real newlines) ·
+`replace_symbol_body` (⚠️ swallows the signature) · `create_text_file` ·
+`read_memory` / `write_memory` / `edit_memory`.
 
-**Rules:**
-
-1. Before creating any new function: `find_symbol` (does it exist?) + `find_referencing_symbols` (who uses what I'm touching?)
-2. Before editing a file: `get_symbols_overview` + `read_file`
-3. Never duplicate logic already in `panel.h` or `draw_utils.c`
-4. Bash is reserved for build/run commands (`pebble build`, `pebble install`, `pebble logs`);
-   `pebble build` must ALWAYS run alone — never piped to grep/tail/sed (inspection commands
-   run separately)
-5. Beware of `replace_content` in regex mode inserting literal `\n` — prefer
-   `replace_symbol_body` for whole functions
+Rules: `find_symbol` before creating any helper; never duplicate logic already in
+`panel.h` or `draw_utils.c`; after a partially-failed edit batch, re-read the file
+before continuing.
 
 ---
 
