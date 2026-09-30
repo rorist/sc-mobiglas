@@ -4,38 +4,31 @@
 # captures a named screenshot into debug/, restores defaults.
 #
 # Usage:
-#   ./debug.sh [--install] <case>   run one case (each capture opened with macOS open)
-#   ./debug.sh [--install] --all    iterate all cases + write debug/index.md
-#   ./debug.sh --emu <emu> ...      use another emulator (flint, gabbro; OUT debug/<emu>)
+#   ./debug.sh [--install] <case>   run one case on ALL 3 platforms (emery/flint/gabbro)
+#   ./debug.sh [--install] --all    iterate all cases on each platform (+ per-platform index.md)
+#   ./debug.sh --emu <emu> ...      restrict to ONE emulator (emery, flint, gabbro)
 #   ./debug.sh --list               list available cases
-#   ./debug.sh --reset              send default config and exit
+#   ./debug.sh --reset              send default config on each platform and exit
 #
-# Requires: app installed & running in the emulator (--install does it once).
+# Without --emu the action runs on emery, flint AND gabbro (captures land in
+# debug/, debug/flint/, debug/gabbro/). --install installs the current build
+# on each platform first and seeds color defaults + sample weather so captures
+# are usable right away.
 
-EMU=emery
-while [ "$1" = "--emu" ]; do
-  EMU=$2
-  shift 2
-done
-OUT=debug
-[ "$EMU" != "emery" ] && OUT="debug/$EMU"
-mkdir -p "$OUT"
-
-# global flag: --install (install once, before any case/batch runs)
+EMU=
 INSTALL=0
-while [ "$1" = "--install" ]; do
-  INSTALL=1
-  shift
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --emu)      EMU=$2; shift 2 ;;
+    --install) INSTALL=1; shift ;;
+    *) break ;;
+  esac
 done
-
-if [ "$INSTALL" = "1" ]; then
-  pebble install --emulator "$EMU"
-fi
 
 # --- message keys (list-format numbering, see package.json) ---
 K_MED=10000        # 8 items: BPM STEPS SLEEP KCAL DIST ACT RKCAL DSLEEP
 K_ENV=10008        # 6 items: WEATHER WIND HUM UV SUNRISE SUNSET
-K_SYS=10014        # 2 items: BAT COM
+K_SYS=10014       # 2 items: BAT COM
 K_SHOW_DATE=10019
 K_12H=10020
 K_FAHRENHEIT=10021
@@ -48,6 +41,14 @@ K_COL_VALUE=10033  # 0xFFFFFF
 K_COL_LABEL=10034  # 0x55AAFF
 K_COL_HEADER=10035 # 0x00AAFF
 K_COL_WARN=10036   # 0xFF8800
+K_TEMP=10016       # Int8 — must be sent with K_WEATHER in the SAME message
+K_WEATHER=10017    # CString
+K_WIND_SPEED=10025
+K_WIND_DIR=10026
+K_HUMIDITY=10027
+K_UV=10028
+K_SUNRISE=10029    # CString "HH:MM"
+K_SUNSET=10030     # CString "HH:MM"
 
 INT_ARGS=()
 
@@ -76,6 +77,14 @@ send_color_defaults() {
   pebble send-app-message --emulator "$EMU" --int \
     $K_COL_TIME=11206655 $K_COL_VALUE=16777215 $K_COL_LABEL=5614335 \
     $K_COL_HEADER=43775 $K_COL_WARN=16746496 >/dev/null
+}
+
+# Sample weather so ENVIRON captures show real data (temp + condition in the
+# same AppMessage or appmessage.c ignores the pair)
+send_weather() {
+  pebble send-app-message --emulator "$EMU" \
+    --int $K_TEMP=16 $K_WIND_SPEED=8 $K_WIND_DIR=135 $K_HUMIDITY=74 $K_UV=3 \
+    --string $K_WEATHER=CLOUDY $K_SUNRISE=07:26 $K_SUNSET=19:14 >/dev/null
 }
 
 shot() {
@@ -121,37 +130,58 @@ if [ "$1" = "--list" ]; then
   exit 0
 fi
 
-if [ "$1" = "--reset" ]; then
-  send_defaults
-  send_color_defaults
-  echo "default config sent"
-  exit 0
-fi
-
-if [ "$1" = "--all" ]; then
-  {
-    echo "# debug.sh captures"
-    echo
-    for c in "${CASES[@]}"; do
-      run_case "$c"
-      sleep 0.6
-      shot "$c"
-      send_defaults
-    done
-    echo
-    for c in "${CASES[@]}"; do echo "## $c"; echo '![](shot_'"$c"'.png)'; echo; done
-  } > "$OUT/index.md"
-  echo "batch done — $OUT/index.md"
-  exit 0
-fi
-
 if [ -z "$1" ]; then
   echo "usage: ./debug.sh [--emu emu] [--install] <case> | --all | --list | --reset"
+  echo "default: runs on emery, flint and gabbro; --emu restricts to one"
   echo "cases: ./debug.sh --list"
   exit 1
 fi
 
-run_case "$1"
-sleep 0.6
-shot "$1"
-send_defaults
+run_platform() { # $1 = emulator, $2 = action (case, --all or --reset)
+  EMU=$1
+  OUT=debug
+  [ "$EMU" != "emery" ] && OUT="debug/$EMU"
+  mkdir -p "$OUT"
+  if [ "$INSTALL" = "1" ]; then
+    pebble install --emulator "$EMU" || { echo "install failed on $EMU — is the emulator running?"; return 1; }
+    send_defaults
+    send_color_defaults
+    send_weather
+  fi
+  if [ "$2" = "--reset" ]; then
+    send_defaults
+    send_color_defaults
+    echo "default config sent to $EMU"
+    return 0
+  fi
+  if [ "$2" = "--all" ]; then
+    {
+      echo "# debug.sh captures ($EMU)"
+      echo
+      for c in "${CASES[@]}"; do
+        run_case "$c"
+        sleep 0.6
+        shot "$c"
+        send_defaults
+      done
+      echo
+      for c in "${CASES[@]}"; do echo "## $c"; echo '![](shot_'"$c"'.png)'; echo; done
+    } > "$OUT/index.md"
+    echo "batch done on $EMU — $OUT/index.md"
+    return 0
+  fi
+  run_case "$2"
+  sleep 0.6
+  shot "$2"
+  send_defaults
+}
+
+if [ -z "$EMU" ]; then
+  PLATFORMS=(emery flint gabbro)
+else
+  PLATFORMS=("$EMU")
+fi
+
+for p in "${PLATFORMS[@]}"; do
+  run_platform "$p" "$1"
+done
