@@ -17,7 +17,7 @@ Install from the [Rebble app store](https://apps.repebble.com/e0270f35ea0b418589
 
 ## Development
 
-Requires the [Rebble SDK](https://developer.rebble.com/) (see the install guide there).
+Requires the [Rebble SDK](https://developer.repebble.com/) (see the install guide there).
 
     pebble clean && pebble build             # build all 3 platforms
     pebble install --emulator emery          # emery | flint | gabbro
