@@ -1,5 +1,7 @@
 # SC mobiGlas - Star Citizen Watchface for Pebble
 
+<img src="screenshots/watchface.png" align="right" width="180" />
+
 A fan-made watchface for Pebble inspired by the Star Citizen mobiGlas holographic interface. Works on color (PT2), round (Round 2), and B&W (Pebble 2 Duo) watches.
 
 ## Features
