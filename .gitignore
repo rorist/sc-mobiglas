@@ -1,5 +1,6 @@
 build/
 .serena/
+.opencode/
 *screenshot*.png
 .lock-waf_darwin_build
 node_modules/
