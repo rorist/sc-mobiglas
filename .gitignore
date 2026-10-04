@@ -2,7 +2,7 @@ build/
 .serena/
 .opencode/
 *screenshot*.png
-.lock-waf_darwin_build
+.lock-waf_*_build
 node_modules/
 package-lock.json
 debug/
