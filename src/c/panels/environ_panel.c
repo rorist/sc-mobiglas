@@ -438,18 +438,38 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
               }
             } else {
               // Other pairs: measured split — the first cell takes its
-              // needed width, the second gets the remainder; 50/50 only
-              // when neither order leaves both texts readable.
+              // needed width, the second gets the remainder. When the
+              // remainder can't hold the first cell, degrade instead of
+              // packing a cell whose text draws as an ellipsis (the
+              // height check below can't catch that): 50/50 when both
+              // texts fit their half (icons kept), else fail the split —
+              // the packer retries on the smaller face. On the last face
+              // the starving split is accepted rather than losing the
+              // row outright.
+              const int need2 = prv_item_need_w(b, pf, false);
+              const int txt1 = prv_text_w(
+                  (a == 0) ? s_temp_buf : prv_metric_txt(a, false), pf);
+              const int txt2 = prv_text_w(
+                  (b == 0) ? s_temp_buf : prv_metric_txt(b, false), pf);
               int c1 = prv_item_need_w(a, pf, false);
               int c2 = w - c1;
-              const int need2 = prv_item_need_w(b, pf, false);
               if (c2 < need2) {
-                c2 = need2;
-                c1 = w - need2;
-              }
-              if (c1 < 10) {
-                c1 = half;
-                c2 = w - half;
+                if (half - ENV_ICON_W - 3 >= txt1 &&
+                    half - ENV_ICON_W >= txt2) {
+                  c1 = half;  // 50/50 — both cells keep their icon
+                  c2 = w - half;
+                } else if (fpass == 0) {
+                  split_ok = false;  // retry on the smaller face
+                  c1 = half;
+                  c2 = w - half;
+                } else {
+                  c1 = w - need2;  // last face: accept the starving split
+                  c2 = need2;
+                  if (c1 < 10) {
+                    c1 = half;
+                    c2 = w - half;
+                  }
+                }
               }
               row_w[row_count] = c1;
               row_w2[row_count] = c2;
