@@ -1,5 +1,11 @@
 # Changelog: sc-mobiglas
 
+## [0.3.1] - 2026-10-04
+
+### Fixed
+
+- **Sunrise time**: paired weather rows now split their width evenly, so sunrise/sunset (and humidity/UV) times are never truncated.
+
 ## [0.3.0] - 2026-09-30
 
 Full platform support: the round **Pebble Round 2** and the black & white **Pebble 2 Duo** now each get a layout tailored to their screen. The clock auto-sizes to the space it gets and weather is cached for an instant return to the watchface.

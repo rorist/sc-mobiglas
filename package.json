@@ -1,7 +1,7 @@
 {
   "name": "sc-mobiglas",
   "author": "Rorist",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A fan-made watchface inspired by Star Citizen's holographic mobiGlas interface.\n\nTime (12h/24h), live weather (temperature, conditions, wind, humidity, UV, sunrise/sunset), health data (heart rate and steps), and battery level, all in a clean sci-fi layout.\n\nMake it yours: 9 manufacturer logos (Aegis, Anvil, RSI, Drake...), 5 accent colors, and toggle panels on or off.\n\nEvery Pebble gets its own layout: PT2, Pebble Round 2, and Pebble 2 Duo.\n\nSources will be published on GitHub soon!\n\nUnofficial fan project, not affiliated with Cloud Imperium Games.",
   "license": "MIT",
   "keywords": [
