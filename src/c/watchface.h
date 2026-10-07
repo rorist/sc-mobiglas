@@ -58,6 +58,8 @@
 #define SYSTEMS_MIN_H  32  // 14px line + chrome (74+56+56+32 = 162 = avail)
 #else  // emery / gabbro
 #define TIME_MIN_H     88  // 60px font + date + chrome
+#define TIME_MAX_H    120  // cap with data rows visible (72px face + date
+                          // = content 100); surplus beyond feeds the rows
 #define MEDICAL_MIN_H  70  // header + 2 data rows
 #define ENVIRON_MIN_H  70  // header + 3 data rows
 #define SYSTEMS_MIN_H  32  // compact header (BAT inline) + battery bar

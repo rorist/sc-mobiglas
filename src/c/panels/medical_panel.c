@@ -215,16 +215,33 @@ static void prv_draw_ring_cell(GContext *ctx, int x, int y, int rd,
   }
 
   // The value must fit inside the ring's inner circle (diameter minus the
-  // stroke on both sides), not spill over it. Step down to the 12px metric
-  // face when the 14px text is wider than that chord; anything still too
-  // wide clips at the inner edge (ellipsis accepted).
+  // stroke on both sides) with at least 1px of clearance (design rule:
+  // every element keeps >=1px of space). Step down to the 12px metric face
+  // when the 14px text is wider than that chord; a value still too wide at
+  // 12px draws best-effort inside the chord — completeness beats clearance.
   const int inner = rd - 2 * stroke;
   const int txt_w = graphics_text_layout_get_content_size(
       slot->value, fonts_get(FONT_SIZE_HEADER), GRect(0, 0, 200, 20),
       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter).w;
   GFont vfont = fonts_get(FONT_SIZE_HEADER);
   int vh = 14, vl = FONT_LEADING_14;
-  if (txt_w > inner) {
+  if (rd >= 52) {
+    // Big rings (solo / few metrics): try the 18px value face first —
+    // the value is the payload, give it the largest face the chord
+    // allows; the label grows to 14px to match.
+    const int txt18 = graphics_text_layout_get_content_size(
+        slot->value, fonts_get(FONT_SIZE_VALUE), GRect(0, 0, 200, 20),
+        GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter).w;
+    if (txt18 <= inner - 1) {
+      vfont = fonts_get(FONT_SIZE_VALUE);
+      vh = 18;
+      vl = FONT_LEADING_18;
+    } else if (txt_w > inner - 1) {
+      vfont = fonts_get(FONT_SIZE_METRIC);
+      vh = 12;
+      vl = FONT_LEADING_12;
+    }
+  } else if (txt_w > inner - 1) {
     vfont = fonts_get(FONT_SIZE_METRIC);
     vh = 12;
     vl = FONT_LEADING_12;
@@ -236,10 +253,14 @@ static void prv_draw_ring_cell(GContext *ctx, int x, int y, int rd,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 
+  const bool big = (vh == 18);
+  const int lh = big ? 14 : 12;
+  const int ll = big ? FONT_LEADING_14 : FONT_LEADING_12;
   graphics_context_set_text_color(ctx, watchface_get_color_label());
-  graphics_draw_text(ctx, slot->label, fonts_get(FONT_SIZE_METRIC),
-                     GRect(x + (rd - cell_w) / 2, y + rd + 2 - FONT_LEADING_12,
-                           cell_w, 12 + FONT_LEADING_12),
+  graphics_draw_text(ctx, slot->label,
+                     fonts_get(big ? FONT_SIZE_HEADER : FONT_SIZE_METRIC),
+                     GRect(x + (rd - cell_w) / 2, y + rd + 2 - ll, cell_w,
+                           lh + ll),
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 }

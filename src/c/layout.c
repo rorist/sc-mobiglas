@@ -137,10 +137,16 @@ LayoutInfo layout_compute(GRect screen, uint8_t config) {
 
     h_bot = has_bot ? min_bot + per_row : 0;
 #else
-    // Emery/gabbro: data rows pinned at their minimum, all the surplus
-    // goes to TIME (SYSTEMS keeps the same height whatever the layout)
+    // Emery/gabbro: data rows pinned at their minimum; the surplus goes to
+    // TIME up to a cap (72px face + date), the rest to the data row —
+    // bigger rings / looser ENVIRON lines instead of an oversized clock.
+    // TIME alone (or with SYSTEMS only) keeps everything: hero mode.
     h_time = min_time + surplus;
     h_mid = has_mid ? min_mid : 0;
+    if (has_mid && h_time > TIME_MAX_H) {
+      h_mid += h_time - TIME_MAX_H;
+      h_time = TIME_MAX_H;
+    }
     h_bot = has_bot ? min_bot : 0;
 #endif
   } else {

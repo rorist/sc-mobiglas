@@ -92,6 +92,11 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     int bar_w = (show_com ? com_x - gap : content.origin.x + content.size.w)
                 - bar_x;
     if (bar_w < 20) bar_w = 20;
+    // 1px clearance rule: the bar never encroaches on the COM group
+    if (show_com && bar_x + bar_w > com_x - 1) {
+      bar_w = com_x - 1 - bar_x;
+      if (bar_w < 1) bar_w = 1;
+    }
     const int bar_h = 8;
     GRect bar_rect = GRect(bar_x, y + (line_h - bar_h) / 2, bar_w, bar_h);
     draw_battery_bar(ctx, bar_rect, bat.charge_percent, bat_col);
