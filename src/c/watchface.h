@@ -62,7 +62,7 @@
                           // = content 100); surplus beyond feeds the rows
 #define MEDICAL_MIN_H  70  // header + 2 data rows
 #define ENVIRON_MIN_H  70  // header + 3 data rows
-#define SYSTEMS_MIN_H  32  // compact header (BAT inline) + battery bar
+#define SYSTEMS_MIN_H  38  // 14px line + 2px bottom clearance (content 16)
 #endif
 
 // ---------------------------------------------------------------------------

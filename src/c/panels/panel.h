@@ -49,14 +49,16 @@ static inline void panel_draw_header_with_right(GContext *ctx, GRect bounds,
                        watchface_get_color_header(), right_color);
 }
 
-// Content area: the usable rect below the header (below underline at y+16)
+// Content area: the usable rect below the header (3px under the underline
+// on emery/gabbro, 1px on flint which keeps the tight budget)
 static inline GRect panel_content_rect(GRect bounds) {
 #if PBL_DISPLAY_WIDTH < 200
   // Flint: short panels — no bottom pad, content must fit the tight height
   return GRect(bounds.origin.x + 4, bounds.origin.y + 16,
                bounds.size.w - 8, bounds.size.h - 16);
 #else
-  return GRect(bounds.origin.x + 4, bounds.origin.y + 16,
-               bounds.size.w - 8, bounds.size.h - 20);
+  // 3px clear below the header underline (y+14): content starts y+18
+  return GRect(bounds.origin.x + 4, bounds.origin.y + 18,
+               bounds.size.w - 8, bounds.size.h - 22);
 #endif
 }
