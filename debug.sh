@@ -104,6 +104,15 @@ send_debug_health() {
     $K_DBG_DSLEEP=3600 >/dev/null
 }
 
+# Worst-case health values (max realistic text widths: 5-6 char numbers;
+# rings saturate at 100% — draw_ring_gauge clamps). Used by the med-8w cases.
+send_debug_health_worst() {
+  pebble send-app-message --emulator "$EMU" --int \
+    $K_DBG_BPM=144 $K_DBG_STEPS=44444 $K_DBG_SLEEP=38640 $K_DBG_KCAL=4444 \
+    $K_DBG_DISTANCE=44000 $K_DBG_ACTIVE=17040 $K_DBG_RKCAL=444 \
+    $K_DBG_DSLEEP=17040 >/dev/null
+}
+
 # Clear the debug health overrides (val < 0 = clear, per medical_panel_set_debug)
 send_debug_health_clear() {
   pebble send-app-message --emulator "$EMU" --int \
@@ -118,7 +127,7 @@ shot() {
 }
 
 run_case() {
-  local med env sys h f d pm pe ps lg
+  local med env sys h f d pm pe ps lg worst=0
   case "$1" in
     all)          med=3;  env=63; sys=3; h=0; f=0; d=1; pm=1; pe=1; ps=1; lg=7 ;;
     med-only)     med=3;  env=63; sys=3; h=0; f=0; d=1; pm=1; pe=0; ps=0; lg=7 ;;
@@ -131,6 +140,8 @@ run_case() {
     med-2)        med=3;  env=63; sys=3; h=0; f=0; d=1; pm=1; pe=1; ps=1; lg=7 ;;
     med-4)        med=15; env=63; sys=3; h=0; f=0; d=1; pm=1; pe=0; ps=0; lg=7 ;;
     med-8)        med=255; env=63; sys=3; h=0; f=0; d=1; pm=1; pe=0; ps=0; lg=7 ;;
+    med-8w)       med=255; env=63; sys=3; h=0; f=0; d=1; pm=1; pe=0; ps=0; lg=7; worst=1 ;;
+    med-8w+sys)   med=255; env=63; sys=3; h=0; f=0; d=1; pm=1; pe=0; ps=1; lg=7; worst=1 ;;
     env-full)     med=3;  env=7;  sys=3; h=0; f=0; d=1; pm=1; pe=1; ps=1; lg=7 ;;
     env-halves)   med=3;  env=60; sys=3; h=0; f=0; d=1; pm=1; pe=1; ps=1; lg=7 ;;
     env-lone)     med=3;  env=7;  sys=3; h=0; f=0; d=1; pm=1; pe=1; ps=1; lg=7 ;;
@@ -147,9 +158,10 @@ run_case() {
     *) echo "unknown case: $1"; exit 1 ;;
   esac
   send_config "$med" "$env" "$sys" "$h" "$f" "$d" "$pm" "$pe" "$ps" "$lg"
+  if [ "$worst" = "1" ]; then send_debug_health_worst; fi
 }
 
-CASES=(all med-only env-only sys-only time-only med+sys env+sys med-1 med-2 med-4 med-8 env-full env-halves env-lone sys-bat-only sys-com-only sys-empty nodate nologo 12h fahrenheit logo-1 logo-2 logo-3 logo-4 logo-5 logo-6 logo-7 logo-8 logo-9 logo-nodate logo-12h)
+CASES=(all med-only env-only sys-only time-only med+sys env+sys med-1 med-2 med-4 med-8 med-8w med-8w+sys env-full env-halves env-lone sys-bat-only sys-com-only sys-empty nodate nologo 12h fahrenheit logo-1 logo-2 logo-3 logo-4 logo-5 logo-6 logo-7 logo-8 logo-9 logo-nodate logo-12h)
 
 if [ "$1" = "--list" ]; then
   printf '%s\n' "${CASES[@]}"
@@ -191,6 +203,7 @@ run_platform() { # $1 = emulator, $2 = action (case, --all or --reset)
         sleep 0.6
         shot "$c"
         send_defaults
+        case "$c" in med-8w|med-8w+sys) send_debug_health ;; esac
       done
       echo
       for c in "${CASES[@]}"; do echo "## $c"; echo '![](shot_'"$c"'.png)'; echo; done
@@ -202,6 +215,7 @@ run_platform() { # $1 = emulator, $2 = action (case, --all or --reset)
   sleep 0.6
   shot "$2"
   send_defaults
+  case "$2" in med-8w|med-8w+sys) send_debug_health ;; esac
 }
 
 if [ -z "$EMU" ]; then
