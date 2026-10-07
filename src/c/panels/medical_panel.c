@@ -190,8 +190,10 @@ static void prv_refresh_health(void) {
 // Narrow rings (< 28px, flint): empty gauge + value below, no label.
 static void prv_draw_ring_cell(GContext *ctx, int x, int y, int rd,
                                int cell_w, const MedSlot *slot) {
-  // 1-bit displays: gauge track #0055aa binarizes to black = invisible
-  draw_ring_gauge(ctx, GRect(x, y, rd, rd), slot->pct, 3,
+  // 1-bit displays: gauge track #0055aa binarizes to black = invisible.
+  // 2px stroke below 48px rings: a thinner line buys inner width for text.
+  const int stroke = (rd < 48) ? 2 : 3;
+  draw_ring_gauge(ctx, GRect(x, y, rd, rd), slot->pct, stroke,
                   PBL_IF_BW_ELSE(GColorWhite, COLOR_GAUGE_BG), slot->fill);
 
   if (rd < 28) {
@@ -212,17 +214,32 @@ static void prv_draw_ring_cell(GContext *ctx, int x, int y, int rd,
     return;
   }
 
+  // The value must fit inside the ring's inner circle (diameter minus the
+  // stroke on both sides), not spill over it. Step down to the 12px metric
+  // face when the 14px text is wider than that chord; anything still too
+  // wide clips at the inner edge (ellipsis accepted).
+  const int inner = rd - 2 * stroke;
+  const int txt_w = graphics_text_layout_get_content_size(
+      slot->value, fonts_get(FONT_SIZE_HEADER), GRect(0, 0, 200, 20),
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter).w;
+  GFont vfont = fonts_get(FONT_SIZE_HEADER);
+  int vh = 14, vl = FONT_LEADING_14;
+  if (txt_w > inner) {
+    vfont = fonts_get(FONT_SIZE_METRIC);
+    vh = 12;
+    vl = FONT_LEADING_12;
+  }
   graphics_context_set_text_color(ctx, slot->value_col);
-  graphics_draw_text(ctx, slot->value, fonts_get(FONT_SIZE_HEADER),
-                     GRect(x, y + (rd - 14) / 2 - FONT_LEADING_14,
-                           rd, 14 + FONT_LEADING_14),
+  graphics_draw_text(ctx, slot->value, vfont,
+                     GRect(x + (rd - inner) / 2, y + (rd - vh) / 2 - vl,
+                           inner, vh + vl),
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 
   graphics_context_set_text_color(ctx, watchface_get_color_label());
-  graphics_draw_text(ctx, slot->label, fonts_get(FONT_SIZE_HEADER),
-                     GRect(x + (rd - cell_w) / 2, y + rd + 2 - FONT_LEADING_14,
-                           cell_w, 14 + FONT_LEADING_14),
+  graphics_draw_text(ctx, slot->label, fonts_get(FONT_SIZE_METRIC),
+                     GRect(x + (rd - cell_w) / 2, y + rd + 2 - FONT_LEADING_12,
+                           cell_w, 12 + FONT_LEADING_12),
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 }
@@ -253,7 +270,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     while (n > 2 && cw / n < 44) n--;
     if (n == 0) return;
     const int cell_w = cw / n;
-    int rd = ch - 17;
+    int rd = ch - 14;                   // ring + 2px gap + 12px label
     int rd_max = cell_w - 6;
     if (rd > rd_max) rd = rd_max;
     if (rd < 16) rd = 16;
@@ -269,7 +286,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     // Compact mode: two side-by-side ring gauges (first 2 active)
     int n = prv_active_slots(mask, 2, idx);
     if (n == 0) return;
-    int rd = ch - 17;                   // ring + 2px gap + 14px label
+    int rd = ch - 14;                   // ring + 2px gap + 12px label
     int rd_max = cw / 2 - 8;            // fit within own column
     if (rd > rd_max) rd = rd_max;
     if (rd < 20) rd = 20;
