@@ -67,11 +67,11 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // to fit the full logo; flint is fixed at 14px (hero never runs there)
   int date_h_hero = 18;
 #if PBL_DISPLAY_WIDTH < 200
+  const bool show_logo = (s_logo_bmp != NULL);
   // Flint (144px wide): the 36px logo zone + the 40px face fit side by
   // side (worst "04:44" = 92px in a 92px zone); the date drops to 14px to
   // keep the whole block inside the short content
   const bool hero = false;
-  const bool show_logo = (s_logo_bmp != NULL);
   const FontSize time_font = FONT_SIZE_TIME_SMALL;
   const int time_rect_h = 40;
   const int l_time = FONT_LEADING_40;
@@ -89,63 +89,50 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   FontSize time_font;
   int time_rect_h;
   if (hero) {
+    // Hero (TIME-only / TIME+SYSTEMS): the face steps down until the
+    // block fits; the DATE shrinks first (18 -> 14px), then the face —
+    // the date is cheap to lose, the big digits are the point of hero.
     const int logo_h = show_logo ? 6 + logo_bounds.size.h : 0;
-    // Each rung requires the FULL logo below the time (logo_h = 6 + logo
-    // height): the logo is never squeezed — the date first shrinks
-    // 18 -> 14px, then the face steps down; the final SMALL rung
-    // guarantees the block on short contents (gabbro TIME+SYSTEMS)
     const int dp = date_on ? 21 : 0;   // date block at 18px
     const int dps = date_on ? 17 : 0;  // date block at 14px
-    if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_MASSIVE) &&
-        76 + logo_h + dp <= content.size.h) {
-      time_font = FONT_SIZE_TIME_MASSIVE;
-      time_rect_h = 76;
-    } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_HUGE) &&
-               68 + logo_h + dp <= content.size.h) {
-      time_font = FONT_SIZE_TIME_HUGE;
-      time_rect_h = 68;
-    } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_HUGE) &&
-               68 + logo_h + dps <= content.size.h) {
-      time_font = FONT_SIZE_TIME_HUGE;
-      time_rect_h = 68;
-      date_h_hero = 14;
-    } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_BIG) &&
-               56 + logo_h + dp <= content.size.h) {
-      time_font = FONT_SIZE_TIME_BIG;
-      time_rect_h = 56;
-    } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_BIG) &&
-               56 + logo_h + dps <= content.size.h) {
-      time_font = FONT_SIZE_TIME_BIG;
-      time_rect_h = 56;
-      date_h_hero = 14;
-    } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME) &&
-               52 + logo_h + dp <= content.size.h) {
-      time_font = FONT_SIZE_TIME;
-      time_rect_h = 52;
-    } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME) &&
-               52 + logo_h + dps <= content.size.h) {
-      time_font = FONT_SIZE_TIME;
-      time_rect_h = 52;
-      date_h_hero = 14;
-    } else if (content.size.w >= prv_time_max_w(FONT_SIZE_TIME_SMALL) &&
-               40 + logo_h + dp <= content.size.h) {
-      time_font = FONT_SIZE_TIME_SMALL;
-      time_rect_h = 40;
-    } else {
-      time_font = FONT_SIZE_TIME_SMALL;
-      time_rect_h = 40;
-      date_h_hero = 14;
-    }
-  } else if (show_logo) {
-#ifdef PBL_ROUND
-    // Gabbro: the chord-narrowed time zone (~97px) cannot fit the 50px
-    // face ("04:44" = 115px) — use the 40px face instead
     time_font = FONT_SIZE_TIME_SMALL;
     time_rect_h = 40;
-#else
-    time_font = FONT_SIZE_TIME;
-    time_rect_h = 52;
-#endif
+    static const struct { FontSize face; int rect_h; } rungs[] = {
+        {FONT_SIZE_TIME_MASSIVE, 76}, {FONT_SIZE_TIME_HUGE, 68},
+        {FONT_SIZE_TIME_BIG, 56},     {FONT_SIZE_TIME, 52},
+        {FONT_SIZE_TIME_SMALL, 40}};
+    for (unsigned i = 0; i < sizeof(rungs) / sizeof(rungs[0]); i++) {
+      if (content.size.w < prv_time_max_w(rungs[i].face)) continue;
+      if (rungs[i].rect_h + logo_h + dp <= content.size.h) {
+        time_font = rungs[i].face;
+        time_rect_h = rungs[i].rect_h;
+        break;
+      }
+      if (rungs[i].rect_h + logo_h + dps > content.size.h) continue;
+      time_font = rungs[i].face;
+      time_rect_h = rungs[i].rect_h;
+      date_h_hero = 14;
+      break;
+    }
+  } else if (show_logo) {
+    // Side-by-side with the logo: pick the biggest face whose WORST-CASE
+    // width fits beside the logo zone, and whose block (+date) fits the
+    // height. The zone clamps the logo; assets stay full-size.
+    const int zone_w = 64;  // emery + gabbro share the 64px logo zone
+    time_font = FONT_SIZE_TIME_SMALL;
+    time_rect_h = 40;
+    static const struct { FontSize face; int rect_h; } rungs[] = {
+        {FONT_SIZE_TIME_BIG, 56}, {FONT_SIZE_TIME, 52},
+        {FONT_SIZE_TIME_SMALL, 40}};
+    const int date_blk = date_on ? 3 + date_h_hero : 0;
+    for (unsigned i = 0; i < sizeof(rungs) / sizeof(rungs[0]); i++) {
+      if (content.size.w <
+          prv_time_max_w(rungs[i].face) + 3 + zone_w) continue;
+      if (rungs[i].rect_h + date_blk > content.size.h) continue;
+      time_font = rungs[i].face;
+      time_rect_h = rungs[i].rect_h;
+      break;
+    }
   } else if (date_on) {
     // Date takes 21px extra: ladder 72px (block 89) / 60px (77) / 40px (61)
     // / 50px — short chord rows (gabbro) step down instead of clipping
@@ -190,14 +177,11 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   // rather than paint outside the layout
   int logo_draw_w = logo_bounds.size.w;
   int logo_draw_h = logo_bounds.size.h;
-#if PBL_DISPLAY_WIDTH < 200
-  const int LOGO_ZONE_W = 36;
-  if (show_logo &&
-      (logo_draw_w > LOGO_ZONE_W || logo_draw_h > content.size.h)) {
-    logo_draw_w = 0;
+  const int LOGO_ZONE_W = (PBL_DISPLAY_WIDTH < 200) ? 36 : 64;
+  if (show_logo && logo_draw_w > LOGO_ZONE_W) {
+    logo_draw_w = 0;  // oversized asset = stale file: hide it
     logo_draw_h = 0;
   }
-#endif
   if (hero && show_logo) {
     const int avail =
         content.size.h - time_rect_h - 6 - (date_on ? 3 + date_h_hero : 0) - 2;
@@ -208,12 +192,20 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     }
   }
 
-  // Vertical block: time (+ logo below in hero) (+ date) — centered
+  // Vertical block: time (+ logo below in hero) (+ date). The block is
+  // centered; when free height allows, the DATE floats below the time
+  // (its gap grows past the 3px minimum) instead of hugging it — the
+  // time digits keep their centered slot and the spare height reads as
+  // breathing room above the date as much as below the block.
   int block_h = time_rect_h;
   if (hero && show_logo && logo_draw_h > 0) block_h += 6 + logo_draw_h;
-  if (date_on) block_h += 3 + (PBL_DISPLAY_WIDTH < 200 ? 14 : date_h_hero);
+  const int date_gap_min = 3 + (PBL_DISPLAY_WIDTH < 200 ? 14 : date_h_hero);
+  if (date_on) block_h += date_gap_min;
   int y_offset = content.origin.y + (content.size.h - block_h) / 2;
   if (y_offset < content.origin.y) y_offset = content.origin.y;
+  int date_gap = 3;  // visual time->date gap; the date HEIGHT lives in block_h
+  const int free_h = content.size.h - block_h;
+  if (date_on && free_h >= 6) date_gap += (free_h - 6) / 2;
 
   // Logo layout (normal mode only): the time slot is sized on the
   // worst-case time width (no per-minute drift); the logo is anchored to
@@ -272,7 +264,7 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
     const FontSize date_font =
         (date_h < 18) ? FONT_SIZE_HEADER : FONT_SIZE_VALUE;
 #endif
-    GRect date_rect = GRect(time_x, y + 3 - l_date, time_w,
+    GRect date_rect = GRect(time_x, y + date_gap - l_date, time_w,
                             date_h + l_date);
     graphics_context_set_text_color(ctx, watchface_get_color_value());
     graphics_draw_text(ctx, s_date_buf, fonts_get(date_font), date_rect,
