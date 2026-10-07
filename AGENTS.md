@@ -75,8 +75,8 @@ plus named getters; persisted as argb per slot (`storage_load/save_color`); Clay
 - Headers: `draw_panel_header()` / `draw_panel_header_ex()` — accent bar + uppercase label
   + partial underline + ↗ arrow; `_ex` adds a right-aligned label (available, currently
   unused)
-- Content rect `panel_content_rect()` (panel.h): x+4, y+16, w−8; height flint −16 /
-  others −20
+- Content rect `panel_content_rect()` (panel.h): x+4, w−8; flint y+16, h−16 / others
+  y+18, h−22 (3px below the header underline, 4px bottom pad)
 - `draw_corner_accents()` has been **deleted** (dead code, 2026-09-30)
 
 ### Reference layout (emery, all panels on)
@@ -113,14 +113,15 @@ panel_count). Panels toggle via config bitmask bits 2–4 (PANEL_TIME is always 
 | TIME    | 88             | 74 (48px face + 14px date) |
 | MEDICAL | 70             | 56                         |
 | ENVIRON | 70             | 56                         |
-| SYSTEMS | 32             | 32                         |
+| SYSTEMS | 38 (14px line + pad) | 32                  |
 
 flint mins sum to the exact available height (168 − 2×2 − 2×1 = 162).
 
 - **Rows:** 0 = TIME (full width) · 1 = MEDICAL + ENVIRON side-by-side (solo → full width) ·
   2 = SYSTEMS (bottom)
-- **Surplus height:** non-flint → **all to TIME** (other panels stay at min) so combo screens
-  get a bigger clock; flint → split evenly across rows; deficit → proportional shrink
+- **Surplus height:** non-flint → all to TIME up to `TIME_MAX_H` 120 (content 100),
+  remainder to the middle row (bigger rings); flint → split evenly across rows;
+  deficit → proportional shrink
 - **TIME alone** → vertically centered (hero, see Multi-platform)
 - **gabbro (round):** chord-aware width per row (`round_chord_width()` — custom integer
   sqrt, firmware ships no libm `sqrt`) + 16px vertical edge insets; rows narrower than full
@@ -134,12 +135,18 @@ flint mins sum to the exact available height (168 − 2×2 − 2×1 = 162).
   `COLOR_PANEL_BG` full-screen background + separator layer (H lines at inter-row gaps, V
   line between MEDICAL/ENVIRON inset 4px) — no boxed look on round
 - **Time fonts** (`time_panel.c`): ladder rungs check content height AND width ≥
-  `prv_time_max_w(face)` (worst-case "04:44": 92@40 / 115@50 / 138@60 / 165@72 / 184@80):
-  with date → ≥89→72px · ≥77→60px · ≥61→40px SMALL · else 50px; no date → 80/72/60px.
-  Hero (content ≥ 120 high, TIME-only or TIME+SYSTEMS): each rung requires the FULL logo
-  to fit below the face (6 + logo height) and degrades the date 18→14px before stepping
-  the face down; final rung = 40px SMALL (gabbro sys-only: 40px + full logo + 18px date).
-  flint: time 40px, logo zone 36px, date 14px (`FONT_SIZE_HEADER`)
+  `prv_time_max_w(face)` (worst-case "04:44": 92@40 / 115@50 / 138@60 / 165@72 / 184@80).
+  No logo: with date → ≥89→72px · ≥77→60px · ≥61→40px SMALL · else 50px; no date →
+  80/72/60px. Hero (content ≥ 120 high, TIME-only or TIME+SYSTEMS): table ladder
+  {MASSIVE 76, HUGE 68, BIG 56, TIME 52, SMALL 40} — the date shrinks 18→14px before the
+  face steps down; the final rung guarantees the block on short contents. With logo
+  side-by-side (MEDICAL/ENVIRON on): width-aware ladder {BIG 56, TIME 52, SMALL 40} —
+  face kept only if `content.w ≥ max_w(face) + 3 + zone_w` and the block fits in height.
+  The logo is NEVER scaled: natural size in a fixed right zone (`LOGO_ZONE_W` 64,
+  flint 36). flint: time 40px, date 14px (`FONT_SIZE_HEADER`)
+- **Vertical distribution** (`time_panel.c`): the time (+ logo in hero) + date block is
+  centered in the content; the date gap grows with free height (`3 + (free − 6) / 2`)
+  so time and date breathe evenly (floating date)
 - **Logo rendering:** pre-baked per-platform assets (`package.json` `targetPlatforms`,
   same resource name twice): color = cyan logos flattened on OxfordBlue and quantized to
   the official Pebble 64 palette (opaque, AA baked into exact palette colors — pixel-
@@ -156,9 +163,11 @@ flint mins sum to the exact available height (168 − 2×2 − 2×1 = 162).
   full → abbrev (CLR/CLD/FOG/RN/SNW/STM/N-A) → icon only; wind long → "12km/h" → icon
   dropped. flint: icons → 2px dots (`ENV_ICON_W` 4, `ENV_WIDE_MIN` 34); sunrise/sunset
   dropped side-by-side
-- **MEDICAL** (`medical_panel.c`): ring ladder — ring ≥ 28px → value inside + label below;
-  < 28px → 2-letter label (BP/ST/SL/KC/KM/AC/RK/DP) inside + value below (12px METRIC).
-  Full mode caps the ring count so each cell ≥ 44px. Gauge track on flint:
+- **MEDICAL** (`medical_panel.c`): ring ladder — ring ≥ 52px → value 18px VALUE + label
+  14px; ≥ 28px → value 14px + label 12px; < 28px → 2-letter label
+  (BP/ST/SL/KC/KM/AC/RK/DP) inside + value below (12px METRIC). Values are measured
+  (box 200) and step down before ever clipping. Full mode caps the ring count so each
+  cell ≥ 44px. Gauge track on flint:
   `PBL_IF_BW_ELSE(GColorWhite, COLOR_GAUGE_BG)` (#0055aa binarizes to black)
 - **SYSTEMS:** solo COM → left-aligned
 - **Regression guard:** emery rendering must stay pixel-identical — thresholds are sized so
@@ -385,7 +394,7 @@ pebble install --emulator emery     # run in emulator
 pebble screenshot --no-open --emulator emery screenshot.png  # capture emulator screen as PNG
 pebble logs                         # stream watch logs
 pypkjs                              # local PKJS dev server
-./debug.sh --list                   # 32-case debug harness (no recompile needed)
+./debug.sh --list                   # 35-case debug harness (med-8w = worst-case health)
 ./debug.sh --emu flint --install all  # same harness on flint/gabbro (captures in debug/<emu>/)
 ```
 

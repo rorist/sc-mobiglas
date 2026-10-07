@@ -1,5 +1,17 @@
 # Changelog: sc-mobiglas
 
+## [0.3.2] - 2026-10-07
+
+### Changed
+
+- **MEDICAL rings**: rings grow to use the free space and values scale up to 18px.
+- **Time & date**: even vertical spacing — the date floats below the clock instead of hugging it.
+- **Spacing**: more air under panel titles and above the bottom edge.
+
+### Fixed
+
+- **Round displays**: the constructor logo was hidden on Pebble Round 2; it now shows at full size beside the time.
+
 ## [0.3.1] - 2026-10-04
 
 ### Fixed
